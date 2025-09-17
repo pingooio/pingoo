@@ -8,12 +8,19 @@ url: "/docs/geoip"
 
 # GeoIP
 
-pingoo natively supports resolving GeoIP information using `.mmdb` files. A default `geoip.mmdb` database is provided in pingoo's Docker image.
+Pingoo natively supports resolving GeoIP information using `.mmdb` files. A default `geoip.mmdb` database is provided in Pingoo's Docker image.
 
-When geoip is enabled, pingoo will add the `X-Pingoo-Country` and `X-Pingoo-Asn` HTTP headers to upstream requests. Visit the [HTTP headers](/docs/http-headers) page to learn more about the HTTP headers added by pingoo.
+When geoip is enabled, Pingoo will add the `Pingoo-Client-Country` and `Pingoo-Client-Asn` HTTP headers to upstream requests. Visit the [HTTP headers](/docs/http-headers) page to learn more about the HTTP headers added by Pingoo.
 
 
 ## GeoIP Databases
+
+Pingoo tries to load GeoIP databases from the following paths:
+- `/etc/pingoo/geoip.mmdb(.zst)`
+- `/etc/pingoo_data/geoip.mmdb(.zst)`
+
+If no GeoIP database is found, then GeoIP is disabled and a warning message is displayed.
+
 
 GeoIP database records must have at least two fields:
 - `country` a 2-letters `String`
@@ -27,6 +34,6 @@ You can download the latest GeoIP database that we provide for free here: [https
 
 ## Database compression
 
-pingoo supports geoip databases compressed with zstd.
+Pingoo supports geoip databases compressed with zstd.
 
 Compressed geoip databases must have the `.zst` extension e.g. `geoip.mmdb.zst`

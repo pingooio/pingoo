@@ -12,34 +12,51 @@ url: "/docs/services"
 ## Routing
 
 
+```yml
+
+
+```
+
 ## HTTP Proxy
+
+```yml
+
+services:
+  route: host.starts_with("api")
+  api:
+    http_proxy: ["http://api.myservice.internal"]
+```
 
 ### HTTP headers
 
+Ppingoo the following HTTP headers to requests to upstream servers when used in HTTP proxy mode:
 
-pingoo adds a few HTTP headers
+
+`x-forwarded-host`: The original `Host` header. e.g. `example.com`
+
+`x-forwarded-for`:
+
+`x-forwarded-proto`: `http` or `https`
+
+`pingoo-client-ip`: The IP address of the client. e.g. `1.2.3.4`
 
 
-`x-forwarded-host`
+The following headers are available **only** if [geoip](/docs/geoip) is enabled:
 
-`x-forwarded-for`
+`pingoo-client-country`: The 2-letters codes of the country, inferred from the IP address. e.g. `FR`
 
-`x-forwarded-proto`
-
-`pingoo-client-ip`
-
-`pingoo-client-country`
-
-`pingoo-client-asn`
+`pingoo-client-asn`: The [Autonomous System Number](https://en.wikipedia.org/wiki/Autonomous_system_(Internet)), inferred from the IP address. e.g. `123`
 
 
 ## Service Discovery
 
 ### DNS
 
+Pingoo automatically resolves domains in upstreams.
+
 ### Docker
 
-pingoo automagically discovers containers that are tagged with the `pingoo.service` label.
+Pingoo automagically discovers containers that are tagged with the `pingoo.service` label.
 
 ```yml
 services:

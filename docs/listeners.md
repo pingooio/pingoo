@@ -7,7 +7,17 @@ url: "/docs/listeners"
 
 # Listeners
 
+Listeners are the entrypoints of
 
+**pingoo.yml**
+```yml
+listeners:
+  http:
+    address: http://0.0.0.0:8080
+  https:
+    address: http://0.0.0.0:8080
+    services: ["api"]
+```
 
 ## Zero-downtime upgrades
 

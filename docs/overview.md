@@ -7,7 +7,7 @@ url: "/"
 ---
 
 
-## Deployment Options
+## Deployment Patterns
 
 There are two principal ways to deploy pingoo:
 - As a traditionnal load balancer / reverse proxy
@@ -18,6 +18,8 @@ There are two principal ways to deploy pingoo:
 
 
 ### Load Balancer / Reverse Proxy
+
+Visit the [services](/docs/services) page to learn how to configure Pingoo as a Load balancer / reverse proxy.
 
 
 ### Sidecar

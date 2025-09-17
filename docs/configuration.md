@@ -5,11 +5,23 @@ type: "page"
 url: "/docs/configuration"
 ---
 
+# Configuration
+
+
+
+## Configuration directory
+
+Pingoo uses the `/etc/pingoo` directory to load and store its configuration files.
+
+Pingoo needs **read and write** access to its configuration directory.
+
+
 ## Configuration File
 
 pingoo checks for its configuration file in the following locations (in this order):
 - `pingoo.yml`
 - `/etc/pingoo/pingoo.yml`
+
 
 
 ## pingoo.yml reference
