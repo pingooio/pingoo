@@ -3,7 +3,9 @@ name: audit dependencies
 on:
   push:
     branches:
-      - ['**']
+      - '**'
+    tags-ignore:
+      - '**'
 
 jobs:
   audit-pingoo:
