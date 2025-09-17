@@ -14,7 +14,7 @@ Pingoo uses the `/etc/pingoo` directory to load and store its configuration file
 
 Pingoo needs **read and write** permission to the configuration directory.
 
-Pingoo uses the `/etc/pingoo/certificates` to load and store TLS certificates. Visit the [TLS](/docs/tls) page to learn more about TLS configuration.
+Pingoo uses the `/etc/pingoo/certificates` directory to load and store TLS certificates. Visit the [TLS page](/docs/tls) to learn more about TLS configuration.
 
 
 ## Configuration File
@@ -27,10 +27,10 @@ Pingoo checks for its configuration file in the following locations (in this ord
 
 ## pingoo.yml reference
 
-> You may find non-documented configuration field by reading pingoo's source code. Please refrain from using them as we provide no guarantees about their stability.
+> You may find non-documented configuration field by reading Pingoo's source code. Please refrain from using them as we provide no guarantees about their stability.
 
 ```yml
-# Listeners are the port that pingoo exposes and listen to.
+# Listeners are the port that Pingoo exposes and listen to.
 listeners:
   http: # name of the listener
     # valid protocols are: http, https, tcp, tcp+tls
@@ -61,7 +61,7 @@ rules:
     # (optional) Expression to match requests to apply the rule.
     # If expression is empty, then the rule matches all the requests.
     expression: |
-      !request.user_agent.starts_with("Mozilla/") && !request.user_agent.contains("curl/")
+      !http_request.user_agent.starts_with("Mozilla/") && !http_request.user_agent.contains("curl/")
     actions:
       - action: captcha
         parameters: {}

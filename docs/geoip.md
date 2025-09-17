@@ -28,7 +28,7 @@ GeoIP database records must have at least two fields:
 
 You can download the latest GeoIP database that we provide for free here: [https://downloads.pingoo.io/geoip.mmdb.zst](https://downloads.pingoo.io/geoip.mmdb.zst)
 
-> Free geoip databases are updated once a month. Please feel free to [contact us](/contact) if you need a database updated daily.
+> Free geoip databases are roughly updated once a month. Please feel free to [contact us](/contact) if you need a database updated daily.
 
 
 ## Database compression

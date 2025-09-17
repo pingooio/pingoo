@@ -19,7 +19,8 @@ services:
     http_proxy: ["http://127.0.0.1"]
 ```
 
-See the [rules page](/docs/rules) to learn Pingoo's expression language.
+See the [rules page](/docs/rules) to learn Pingoo's expression language and what variables and function are available.
+
 
 ## HTTP Proxy
 
@@ -34,9 +35,10 @@ services:
     http_proxy: ["http://api1.myservice.internal", "http://api2.myservice.internal"]
 ```
 
+
 ### HTTP headers
 
-Ppingoo the following HTTP headers to requests to upstream servers when used in HTTP proxy mode:
+Pingoo adds the following HTTP headers to requests to upstream servers when used in HTTP proxy mode:
 
 
 `x-forwarded-host`: The original `Host` header. e.g. `example.com`. See https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-Forwarded-Host
@@ -76,11 +78,11 @@ services:
 **pingoo.yml**
 ```yml
 listeners:
-  tcp:
+  smtp:
     address: tcp://0.0.0.0:25
 
 services:
-  smtp_plaintest:
+  smtp_backends:
     tcp_proxy: ["tcp://1.2.3.4:25", "tcp://4.3.2.1:25"]
 ```
 
@@ -93,7 +95,7 @@ Pingoo automatically resolves domains in upstreams.
 
 ### Docker
 
-Pingoo automagically discovers containers that are tagged with the `pingoo.service` label.
+Pingoo automagically discovers containers that are tagged with the `pingoo.service` label:
 
 ```yml
 listeners:
@@ -102,14 +104,14 @@ listeners:
 
 services:
   api:
-    http_proxy: [] # leave the upstreams empty whehn using Docker service discovery
+    http_proxy: [] # leave the upstream list empty whehn using Docker service discovery
 ```
-
-Start your containers with the `pingoo.service` label:
 
 ```bash
 docker run -d --label pingoo.service=api my_api_image:latest
 ```
+Note that `--label pingoo.service=api` match the service name: `api`.
+
 
 Pingoo requires that your containers expose a single port (e.g. `EXPOSE 8080`). If you containers don't expose any port or expose multiple ports, you will need to tag the port to forward traffic to with the `pingoo.port` label.
 
@@ -119,7 +121,7 @@ docker run -d --label pingoo.service=api --label pingoo.port=8080 my_api_image:l
 ```
 
 
-In order to enabled docker service discovery Pingoo needs access to the docker socket. If you are running Pingoo inside a docker container you need to bind the docker socket:
+In order to enable docker service discovery Pingoo needs access to the docker socket. If you are running Pingoo inside a docker container you need to bind the docker socket:
 
 ```bash
 docker run -d -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/pingooio/pingoo

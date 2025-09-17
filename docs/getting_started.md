@@ -13,6 +13,20 @@ Here is an example of using Pingoo:
 - As a load balancer for Docker containers serving an API
 - As a WAF to block requests from some countries
 
+```bash
+$ ls
+pingoo/
+  pingoo.yml
+  certificates/
+    example.com.key
+    example.com.pem
+www/
+  index.html
+  index.css
+  assets/
+    ...
+```
+
 **pingoo.yml**
 ```yml
 listeners:
@@ -37,19 +51,6 @@ rules:
         parameters: {}
 ```
 
-```bash
-$ ls
-pingoo/
-  pingoo.yml
-  certificates/
-    example.com.key
-    example.com.pem
-www/
-  index.html
-  index.css
-  assets/
-    ...
-```
 
 We need to bind the docker socket so Pingoo can list the containers with the `pingoo.service` label.
 

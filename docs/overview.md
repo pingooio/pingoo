@@ -9,9 +9,7 @@ url: "/"
 
 99.9999 % of the web uses some kind of reverse proxy or gateway, trillions of requests per day, whether it is to balance load between different services / machines, terminate TLS, apply security rules or block unwarranted traffic. And yet, this fundamental piece of infrastructure has seen very little love and innovation over the years, especially since the beginning of the AI <s>bubble</s> boom.
 
-I've deployed a growing number of online services and sites, and every time, setting up TLS, load balancing, bot management and a Web Application Firewall (WAF) was the most tedious and painful part of the process.
-
-Existing load balancers and proxies are either stuck in the last century, or all the interesting features are hidden behind "Enterprise Editions".
+Existing load balancers and proxies are either stuck in the last century, or all the interesting features are reserved for "Enterprise Editions".
 
 Pingoo is our attempt at bringing technical excellence and innovation to this forgotten corner of infrastructure.
 
@@ -22,10 +20,10 @@ Our mission? Security and Performance for everyone.
 
 ## Deployment Patterns
 
-There are two principal ways to deploy pingoo:
+There are three principal ways to deploy Pingoo:
 - As a traditionnal load balancer / reverse proxy
 - As a sidecar inside a Docker container, which is particularly handy if you are using a Platform as a Service (PaaS) such as Fly, Render or Heroku to deploy your projects.
-- In hybrid mode, where an instance of pingoo is used for load balancing, and sidecar instances are used as firewalls.
+- In hybrid mode, where an instance of Pingoo is used for load balancing, and sidecar instances are used as firewalls.
 
 ![Pingoo deployment modes](/assets/pingoo_deployment_modes.png)
 

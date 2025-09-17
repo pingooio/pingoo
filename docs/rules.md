@@ -23,13 +23,24 @@ Pingoo uses a subset of the [Common Expression Language (CEL)](https://cel.dev) 
 - `Map<Key, Type>`
 
 
-## Actions
+## Variables
 
-Pingoo currently supports the following actions:
+```rust
+http_request {
+    host: String
+    url: String
+    path: String
+    method: String
+    user_agent: String
+}
 
-- `captcha`: Serve a CAPTCHA to the client that must be solved to access the service.
-- `block`: Serve a 403 permission denied page.
-
+client {
+    ip: Ip
+    remote_port: Int
+    asn: Int
+    country: String
+}
+```
 
 
 ## Functions
@@ -38,7 +49,14 @@ Pingoo currently supports the following actions:
 - `length`
 - `starts_with`
 - `ends_with`
-- `matches`
+
+
+## Actions
+
+Pingoo currently supports the following actions:
+
+- `captcha`: Serve a CAPTCHA to the client that must be solved to proceed.
+- `block`: Serve a 403 permission denied page.
 
 
 ## Lists
@@ -55,29 +73,23 @@ For example:
 1.2.3.4,"bad bot"
 ```
 
-Valid lists types:
-- `Int`
-- `String`
-- `Ip`
-
-
-For example if you have the following configuration file:
-
+**pingoo.yml**
 ```yml
 lists:
   blocked_ips:
     type: Ip
     file: blocked_ips.csv
-```
 
-You can then use the following expression in your rules and routes:
-
-```yml
 rules:
   block_blocked_ips:
-    expression: |
-      lists["blocked_ips"].contains(client.ip)
+    expression: lists["blocked_ips"].contains(client.ip)
     actions:
       - action: block
         parameters: {}
 ```
+
+
+Valid lists types:
+- `Int`
+- `String`
+- `Ip`
