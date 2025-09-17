@@ -1,0 +1,15 @@
+[package]
+name = "rules"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "./rules.rs"
+
+[dependencies]
+bel = { workspace = true }
+chrono = { workspace = true, features = ["clock", "oldtime", "serde", "std" ] }
+serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+

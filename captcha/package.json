@@ -1,0 +1,21 @@
+{
+  "name": "pingoo-captcha",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --strictPort --port 8002 --host",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@preact/signals": "^2.2.1",
+    "@tailwindcss/vite": "^4.1.11",
+    "preact": "^10.26.5"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.1",
+    "typescript": "^5.9.2",
+    "vite": "^7.0.4"
+  }
+}

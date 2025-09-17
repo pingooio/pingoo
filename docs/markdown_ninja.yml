@@ -1,0 +1,42 @@
+site: "pingoo.io"
+name: "Pingoo"
+description: "Performance and Security for everyone"
+
+pages: ["./"]
+
+
+navigation:
+  primary:
+    - label: GitHub
+      url: "https://github.com/pingooio/pingoo"
+
+  secondary:
+    - label: Overview
+      url: "/"
+
+    - label: Getting Started
+      url: "/docs/getting-started"
+
+    - label: Configuration
+      url: "/docs/configuration"
+
+    - label: Listeners
+      url: "/docs/listeners"
+
+    - label: TLS
+      url: "/docs/tls"
+
+    - label: Services
+      url: "/docs/services"
+
+    - label: Rules & Lists
+      url: "/docs/rules"
+
+    - label: Geoip
+      url: "/docs/geoip"
+
+    - label: Support
+      url: "/docs/support"
+
+    - label: Contact
+      url: "/contact"

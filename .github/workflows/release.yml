@@ -1,0 +1,86 @@
+name: release
+
+# Release the Docker images.
+
+# This workflow is composed of 2 stages. First, we build platform-specific Docker images
+# in parallel, then, in the final job, we create and push a Docker manifest for the :latest tag
+
+on:
+  push:
+    branches:
+      - release
+
+permissions:
+  packages: write
+  contents: read
+
+env:
+  DOCKER_IMAGE: ghcr.io/pingooio/pingoo
+
+jobs:
+  docker_build:
+    # Builds are ran on the default runners for x64 and on 'sepcialized' runners for arm64.
+    # https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/expressions
+    runs-on:  ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - amd64
+          - arm64
+
+    steps:
+      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
+
+      - name: Read version from Cargo.toml and export to env
+        run: echo "PINGOO_VERSION=$(cat pingoo/Cargo.toml | grep '^version =' | cut -d'"' -f2)" >> "$GITHUB_ENV"
+
+      # - name: Update packages
+      #   run: |
+      #     sudo apt update && sudo apt upgrade -y
+
+      - name: Docker build image
+        run: |
+          make docker_build
+          docker image tag ${{ env.DOCKER_IMAGE }}:latest ${{ env.DOCKER_IMAGE }}:latest-${{ matrix.arch }}
+          docker image tag ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION} ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION}-${{ matrix.arch }}
+
+      - name: Docker images info
+        run: |
+          docker images
+
+      - name: Login to container registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+
+      - name: Docker push image
+        run: |
+          docker push ${{ env.DOCKER_IMAGE }}:latest-${{ matrix.arch }}
+          docker push ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION}-${{ matrix.arch }}
+
+
+  docker_push_manifest:
+    runs-on: ubuntu-24.04
+    needs:
+      - docker_build
+    steps:
+      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
+
+      - name: Read version from Cargo.toml and export to env
+        run: echo "PINGOO_VERSION=$(cat pingoo/Cargo.toml | grep '^version =' | cut -d'"' -f2)" >> "$GITHUB_ENV"
+
+      - name: Login to container registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+
+      - name: Push Docker manifest
+        run: |
+          docker manifest create ${{ env.DOCKER_IMAGE }}:latest \
+            --amend ${{ env.DOCKER_IMAGE }}:latest-amd64 \
+            --amend ${{ env.DOCKER_IMAGE }}:latest-arm64
+          docker manifest push ${{ env.DOCKER_IMAGE }}:latest
+
+          docker manifest create ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION} \
+            --amend ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION}-amd64 \
+            --amend ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION}-arm64
+          docker manifest push ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION}

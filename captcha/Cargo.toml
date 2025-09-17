@@ -1,0 +1,11 @@
+[package]
+name = "captcha"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "./captcha.rs"
+
+
+[dependencies]
+embed = { workspace = true, features = ["debug-embed"] }

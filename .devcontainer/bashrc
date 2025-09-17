@@ -1,0 +1,16 @@
+alias gs="git status"
+alias ga="git add"
+alias gu="git add -u"
+alias gm="git commit -m"
+alias gp="git push"
+
+export TZ="UTC"
+export DO_NOT_TRACK=1
+
+export GOROOT="/usr/local/go"
+export GOPATH="$HOME/.local/gopath"
+export GOPROXY=direct
+export GOTOOLCHAIN="local"
+# go telemetry off
+
+export PATH="$PATH:$GOROOT/bin:$GOPATH/bin:$HOME/.cargo/bin"

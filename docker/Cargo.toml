@@ -1,0 +1,24 @@
+[package]
+name = "docker"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "docker"
+path = "src/docker.rs"
+
+[[bin]]
+name = "docker"
+path = "src/main.rs"
+
+[dependencies]
+bytes = { workspace = true }
+http-body-util = { workspace = true }
+hyper = { workspace = true, features = ["full"] }
+hyper-util = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_urlencoded = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+tracing = { workspace = true }

@@ -1,0 +1,114 @@
+# See the link below for more information and the default profiles
+# https://doc.rust-lang.org/cargo/reference/profiles.html
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
+codegen-units = 1
+
+
+# These settings should improve compile time (link time) during dev by avoiding to link and include debugger data.
+# It seems to be especially faster on machines with slow disks.
+[profile.dev]
+debug = 0
+strip = "debuginfo"
+
+
+[workspace]
+resolver = "2"
+
+members = [
+    "pingoo",
+    "captcha",
+    "docker",
+    "jwt",
+]
+
+
+[workspace.dependencies]
+base64 = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+bel = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+embed = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+hex = { git = "https://github.com/bloom42/stdx-rs", branch = "main", features = ["serde"] }
+ipnetwork = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+maxminddb = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+mime_guess = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+serde_urlencoded = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+serde_yaml = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+uuid = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+
+
+arc-swap = "1"
+async-trait = "0.1"
+aws-lc-rs = "1"
+bytes = "1"
+chrono = "0.4"
+cookie = { version = "0.18" }
+csv = "1"
+dashmap = "6"
+futures = "0.3"
+heapless = "0.9"
+hickory-resolver = "0.25"
+http = "1"
+http-body-util = "0.1"
+hyper = "1"
+hyper-rustls = "0.27"
+hyper-util = "0.1"
+indexmap = { version = "2" }
+mimalloc = "0.1"
+moka = "0.12"
+rand = "0.9"
+rcgen = { version = "0.14", default-features = false}
+rustls = { version = "0.23", default-features = false }
+rustls-pemfile = "2"
+serde = "1"
+serde_json = "1"
+socket2 = "0.6"
+thiserror = "2"
+tokio = "1"
+tokio-rustls = { version = "0.26", default-features = false }
+tokio-util = "0.7"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false }
+url = { version = "2" }
+wildcard = "0.3"
+x509-parser = "0.18"
+zeroize = "1"
+zstd = "0.13"
+
+
+# countries = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+#
+#
+# tld = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+# jsonwebtoken = "9"
+# mime = "0.3"
+# regex = "1"
+# tokio-stream = "0.1"
+# ed25519-dalek = { git = "https://github.com/dalek-cryptography/curve25519-dalek", rev = "246723eefec35fdc8eb51c8c54a50c1c682e257d", features = ["pkcs8", "pem", "rand_core"] }
+# p256 = "0.13"
+# zeroize = "1"
+
+
+[patch.crates-io]
+base64 = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+cfg-if = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+form_urlencoded = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+hex = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+httpdate = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+ipnetwork = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+itoa = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+mime_guess = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+percent-encoding = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+pin-project-lite = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+ryu = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+serde_urlencoded = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+uuid = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+
+
+thiserror = { git = "https://github.com/dtolnay/thiserror", rev = "819fe29dbb6e41bb937e3fef0469917d7c476c60" }
+async-trait  = { git = "https://github.com/dtolnay/async-trait", rev = "cb2feb3519e189d589f93e983b6014b81997183b" }
+serde = { git = "https://github.com/serde-rs/serde", rev = "1d7899d671c6f6155b63a39fa6001c9c48260821" }
+serde_core  = { git = "https://github.com/serde-rs/serde", rev = "1d7899d671c6f6155b63a39fa6001c9c48260821" }
+serde_derive  = { git = "https://github.com/serde-rs/serde", rev = "1d7899d671c6f6155b63a39fa6001c9c48260821" }
+serde_json  = { git = "https://github.com/serde-rs/json", rev = "d12e943590208da738c092db92c34b39796a2538" }

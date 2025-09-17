@@ -1,0 +1,14 @@
+{
+  "dockerFile": "Dockerfile",
+  "extensions": [
+    "rust-lang.rust-analyzer"
+  ],
+  "forwardPorts": [8080, 8081, 8082, 8083, 8443],
+  "runArgs": ["--init", "--name", "pingoo-dev"],
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind"
+  ],
+  "overrideCommand": false,
+  // "containerUser": "dev",
+  "remoteUser": "dev"
+}

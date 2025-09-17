@@ -1,0 +1,19 @@
+# Default pingoo.yml file. For demonstration purpose only.
+
+listeners:
+  http:
+    address: http://0.0.0.0:8080
+
+services:
+  static_site:
+    static:
+      root: /var/wwww
+
+
+rules:
+  captcha_bots:
+    expression: |
+      !request.user_agent.starts_with("Mozilla/") && !request.user_agent.contains("curl/")
+    actions:
+      - action: captcha
+        parameters: {}

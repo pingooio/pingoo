@@ -1,0 +1,6 @@
+node_modules/
+_dev
+dist/
+target/
+pingoo.yml
+Dockerfile

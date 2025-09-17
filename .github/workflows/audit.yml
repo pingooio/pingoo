@@ -1,0 +1,31 @@
+name: audit dependencies
+
+on:
+  push:
+
+jobs:
+  audit-pingoo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: install and update packages
+        run: |
+          sudo apt update && sudo apt upgrade -y
+          rustup update stable
+          cargo install --locked --git https://github.com/rustsec/rustsec cargo-audit
+
+      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
+
+      - name: cargo audit
+        run: cargo audit
+
+  audit-captcha:
+    runs-on: ubuntu-latest
+    steps:
+      - name: update packages
+        run:  sudo apt update && sudo apt upgrade -y
+
+      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
+
+      - name: npm audit
+        working-directory: captcha
+        run: npm audit
