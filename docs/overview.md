@@ -7,6 +7,19 @@ url: "/"
 ---
 
 
+99.9999 % of the web uses some kind of reverse proxy or gateway, trillions of requests per day, whether it is to balance load between different services / machines, terminate TLS, apply security rules or block unwarranted traffic. And yet, this fundamental piece of infrastructure has seen very little love and innovation over the years, especially since the beginning of the AI <s>bubble</s> boom.
+
+I've deployed a growing number of online services and sites, and every time, setting up TLS, load balancing, bot management and a Web Application Firewall (WAF) was the most tedious and painful part of the process.
+
+Existing load balancers and proxies are either stuck in the last century, or all the interesting features are hidden behind "Enterprise Editions".
+
+Pingoo is our attempt at bringing technical excellence and innovation to this forgotten corner of infrastructure.
+
+We are not only committed to building the best Load Balancer / API Gateway / Reverse proxy, we are also committed to making it forever Open Source, no strings attached.
+
+Our mission? Security and Performance for everyone.
+
+
 ## Deployment Patterns
 
 There are two principal ways to deploy pingoo:
@@ -33,6 +46,7 @@ You may like this approach if you are using a Platform as a Service (PaaS) such 
 ```javascript
 const http = require('http');
 
+const ADDRESS = '127.0.0.1'
 const PORT = 3000;
 
 const server = http.createServer((req, res) => {
@@ -40,8 +54,8 @@ const server = http.createServer((req, res) => {
   res.end('Hello, world!\n');
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+server.listen(PORT, ADDRESS, () => {
+  console.log(`Server running at http://${ADDRESS}:${PORT}`);
 });
 ```
 
@@ -77,4 +91,9 @@ COPY ./server.js ./
 CMD ["/bin/pingoo"]
 
 EXPOSE 8080
+```
+
+```bash
+$ docker build -t myimage:latest -f Dockerfile .
+$ docker run --rm -ti -p 8080:8080 myimage:latest
 ```

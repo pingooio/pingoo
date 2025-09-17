@@ -33,3 +33,6 @@ Pingoo only support HTTP/2 (and QUIC with HTTP/3 soon) on `https` listeners, on 
 Pingoo uses the `SO_REUSEPORT` flag on sockets to enable zero-downtime upgrades
 
 If you are using docker you will need to use the `--network host` CLI argument.
+
+```bash
+$ docker run -d --network host ghcr.io/pingooio/pingoo

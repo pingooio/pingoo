@@ -15,12 +15,11 @@ When geoip is enabled, Pingoo will add the `Pingoo-Client-Country` and `Pingoo-C
 
 ## GeoIP Databases
 
-Pingoo tries to load the GeoIP database from the following paths:
+Pingoo tries to load the GeoIP database from the following paths (in this order):
 - `/etc/pingoo/geoip.mmdb(.zst)`
 - `/etc/pingoo_data/geoip.mmdb(.zst)`
 
 If no GeoIP database is found, then GeoIP is disabled and a warning message is displayed.
-
 
 GeoIP database records must have at least two fields:
 - `country` a 2-letters `String`
@@ -34,6 +33,6 @@ You can download the latest GeoIP database that we provide for free here: [https
 
 ## Database compression
 
-Pingoo supports geoip databases compressed with zstd.
+Pingoo supports geoip databases compressed with [zstd](https://github.com/facebook/zstd).
 
 Compressed geoip databases must have the `.zst` extension e.g. `geoip.mmdb.zst`

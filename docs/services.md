@@ -19,6 +19,8 @@ services:
     http_proxy: ["http://127.0.0.1"]
 ```
 
+See the [rules page](/docs/rules) to learn Pingoo's expression language.
+
 ## HTTP Proxy
 
 ```yml
@@ -29,7 +31,7 @@ listeners:
 services:
   api:
     route: host.starts_with("api")
-    http_proxy: ["http://api.myservice.internal"]
+    http_proxy: ["http://api1.myservice.internal", "http://api2.myservice.internal"]
 ```
 
 ### HTTP headers
@@ -37,20 +39,36 @@ services:
 Ppingoo the following HTTP headers to requests to upstream servers when used in HTTP proxy mode:
 
 
-`x-forwarded-host`: The original `Host` header. e.g. `example.com`
+`x-forwarded-host`: The original `Host` header. e.g. `example.com`. See https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-Forwarded-Host
 
-`x-forwarded-for`:
+`X-Forwarded-For`: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-Forwarded-For
 
-`x-forwarded-proto`: `http` or `https`
+`X-Forwarded-Proto`: `http` or `https`. See https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-Forwarded-Proto
 
-`pingoo-client-ip`: The IP address of the client. e.g. `1.2.3.4`
+`Pingoo-Client-Ip`: The IP address of the client. e.g. `1.2.3.4`.
 
 
 The following headers are available **only** if [geoip](/docs/geoip) is enabled:
 
-`pingoo-client-country`: The 2-letters codes of the country, inferred from the IP address. e.g. `FR`
+`Pingoo-Client-Country`: The 2-letters codes of the country inferred from the IP address. e.g. `FR`
 
-`pingoo-client-asn`: The [Autonomous System Number](https://en.wikipedia.org/wiki/Autonomous_system_(Internet)), inferred from the IP address. e.g. `123`
+`Pingoo-Client-Asn`: The [Autonomous System Number (ASN)](https://en.wikipedia.org/wiki/Autonomous_system_(Internet)) inferred from the IP address. e.g. `123`
+
+
+## Static
+
+Pingoo can directly serve static content such as static sites, single page applications and assets.
+
+```yml
+listeners:
+  http:
+    address: http://0.0.0.0:8080
+
+services:
+  webapp:
+    static:
+      root: /var/www
+```
 
 
 ## TCP proxy
@@ -64,19 +82,6 @@ listeners:
 services:
   smtp_plaintest:
     tcp_proxy: ["tcp://1.2.3.4:25", "tcp://4.3.2.1:25"]
-```
-
-## Static
-
-```yml
-listeners:
-  http:
-    address: http://0.0.0.0:8080
-
-services:
-  webapp:
-    static:
-      root: /var/www
 ```
 
 
@@ -97,22 +102,30 @@ listeners:
 
 services:
   api:
-    http_proxy: []
+    http_proxy: [] # leave the upstreams empty whehn using Docker service discovery
 ```
+
+Start your containers with the `pingoo.service` label:
 
 ```bash
-docker run --label pingoo.service=api my_api_image:latest
+docker run -d --label pingoo.service=api my_api_image:latest
 ```
 
-Pingoo requires that your containers expose a single port (e.g. `EXPOSE 8080`). If you containers don't expose any port or expost multiple ports, you will need to tag them with the `pingoo.port` label.
+Pingoo requires that your containers expose a single port (e.g. `EXPOSE 8080`). If you containers don't expose any port or expose multiple ports, you will need to tag the port to forward traffic to with the `pingoo.port` label.
 
 
 ```bash
-docker run --label pingoo.service=api --label pingoo.port=8080 my_api_image:latest
+docker run -d --label pingoo.service=api --label pingoo.port=8080 my_api_image:latest
 ```
 
 
-In order to enabled docker service discovery Pingoo needs access to the docker socket, so if you are running Pingoo inside a docker container you need to bind it:
+In order to enabled docker service discovery Pingoo needs access to the docker socket. If you are running Pingoo inside a docker container you need to bind the docker socket:
+
 ```bash
 docker run -d -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/pingooio/pingoo
 ```
+
+
+## Load balancing
+
+Pingoo currently load balance requests and connections between upstreams using the state of the art `random` algorithm.

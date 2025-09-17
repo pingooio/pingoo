@@ -43,7 +43,7 @@ Pingoo currently supports the following actions:
 
 ## Lists
 
-You can provide lists to use in your rules and routes.
+You can provide lists to use in your rules and routes expressions.
 
 List must be formatted as CSV with at least 1 column for the values, and 1 optional column for the description.
 
