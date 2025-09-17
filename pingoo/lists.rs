@@ -15,7 +15,6 @@ enum List {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
 pub enum ListType {
     String,
     Int,
