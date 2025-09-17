@@ -25,9 +25,9 @@ pub enum ListType {
 impl fmt::Display for ListType {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         let enum_str = match self {
-            Self::Int => "int",
-            Self::Ip => "ip",
-            Self::String => "string",
+            Self::Int => "Int",
+            Self::Ip => "Ip",
+            Self::String => "String",
         };
         return write!(formatter, "{}", enum_str);
     }
@@ -37,7 +37,8 @@ impl FromStr for ListType {
     type Err = Error;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
+        let value = value.to_ascii_lowercase();
+        match value.as_str() {
             "int" => Ok(Self::Int),
             "ip" => Ok(Self::Ip),
             "string" => Ok(Self::String),

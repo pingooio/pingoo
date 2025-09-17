@@ -213,8 +213,8 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
             let mut rules_ctx = ::rules::Context::default();
             // ctx.add_function("", value);
             // TODO: log error?
-            if let Err(err) = rules_ctx.add_variable("request", request_data) {
-                debug!("rules: error adding request variable: {err}")
+            if let Err(err) = rules_ctx.add_variable("http_request", request_data) {
+                debug!("rules: error adding http_request variable: {err}")
             }
             if let Err(err) = rules_ctx.add_variable("client", &client_data) {
                 debug!("rules: error adding client variable: {err}")
