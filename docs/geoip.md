@@ -15,7 +15,7 @@ When geoip is enabled, Pingoo will add the `Pingoo-Client-Country` and `Pingoo-C
 
 ## GeoIP Databases
 
-Pingoo tries to load GeoIP databases from the following paths:
+Pingoo tries to load the GeoIP database from the following paths:
 - `/etc/pingoo/geoip.mmdb(.zst)`
 - `/etc/pingoo_data/geoip.mmdb(.zst)`
 

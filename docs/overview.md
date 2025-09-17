@@ -26,8 +26,7 @@ Visit the [services](/docs/services) page to learn how to configure Pingoo as a 
 
 Pingoo can also be deployed inside your own docker images and spawn your server as a child process.
 
-You may like this approach if you are using a Platform as a Service (PaaS) such as Fly, Render or Heroku to deploy your projects.
-
+You may like this approach if you are using a Platform as a Service (PaaS) such as Fly, Render or Heroku to deploy your projects and need a WAF or bot management solution.
 
 
 **server.js**

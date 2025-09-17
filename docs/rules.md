@@ -5,28 +5,40 @@ type: "page"
 url: "/docs/rules"
 ---
 
-
 # Rules
+
+## Expression Language
+
+Pingoo uses a subset of the [Common Expression Language (CEL)](https://cel.dev) with all the inconsistencies and "surprising" things trimmed off.
 
 ## Types
 
-`String`
-
-`Int`
+- `Bool`
+- `String`
+- `Int`
+- `Float`
+- `Ip`
+- `Regex`
+- `Array<Type>`
+- `Map<Key, Type>`
 
 
 ## Actions
 
 Pingoo currently supports the following actions:
 
-`captcha`: Serve a CAPTCHA to the client that must be solved to access the service.
-
-
-`block`: Serve a 403 permission denied page.
+- `captcha`: Serve a CAPTCHA to the client that must be solved to access the service.
+- `block`: Serve a 403 permission denied page.
 
 
 
 ## Functions
+
+- `contains`
+- `length`
+- `starts_with`
+- `ends_with`
+- `matches`
 
 
 ## Lists

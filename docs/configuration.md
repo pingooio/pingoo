@@ -8,12 +8,11 @@ url: "/docs/configuration"
 # Configuration
 
 
-
 ## Configuration directory
 
 Pingoo uses the `/etc/pingoo` directory to load and store its configuration files.
 
-Pingoo needs **read and write** access to its configuration directory.
+Pingoo needs **read and write** permission to the configuration directory.
 
 
 ## Configuration File
@@ -34,15 +33,29 @@ listeners:
   http: # name of the listener
     # valid protocols are: http, https, tcp, tcp+tls
     address: http://0.0.0.0:8080
+    # optional list of service to match for this listener.
+    # By default (if the service field is not provided) Pingoo will use all the compatible services:
+    # - http_proxy and static for http / https listeners
+    # - tcp_proxy for tcp / tcp+tls listeners
+    services: ["api"]
 
-# services are your upstream servers where connections and requests are forwarded to.
+# services are the applications that listeners route traffic to
 services:
   api: # name of the service
-    http_proxy: []
+    # (optional) expression to filter requests
+    # match any request / connection if left empty
+    route: http_request.starts_with("/api")
+    http_proxy: [] # list of upstreams. Can be left empty if using Docker service discovery
+
+  webapp:
+    # static site
+    static:
+      # root folder to serve the static site / assets
+      root: /var/www
 
 # (optional)
 rules:
-  captcha_ bots: # name of the rule
+  captcha_bots: # name of the rule
     # (optional) Expression to match requests to apply the rule.
     # If expression is empty, then the rule matches all the requests.
     expression: |
@@ -54,6 +67,6 @@ rules:
 # (optional) Lists can be used in rule expressions to match against a large number of values
 lists:
   blocked_ips: # name of the list
-    type: ip # type of the individual items of the list. Valid values are: int, ip, string
+    type: Ip # type of the individual items of the list. Valid values are: int, ip, string
     file: /etc/pingoo/lists/blocked_ip.csv # path to the list
 ```

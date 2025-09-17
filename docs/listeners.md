@@ -7,7 +7,7 @@ url: "/docs/listeners"
 
 # Listeners
 
-Listeners are the entrypoints of
+Listeners are the addresses, ports and protcols that Pingoo listen to.
 
 **pingoo.yml**
 ```yml
@@ -18,6 +18,15 @@ listeners:
     address: http://0.0.0.0:8080
     services: ["api"]
 ```
+
+Valid protocols:
+- `http`
+- `https`
+- `tcp`
+- `tcp+tls`
+
+Pingoo only support HTTP/2 (and QUIC with HTTP/3 soon) on `https` listeners, on purpose. HTTP/2 was introduced in 2015 and is supported by virtually all browsers and client libraries: https://caniuse.com/http2. Only abandonned bots don't support HTTP/2. Clients are informed of this via the ALPN TLS field.
+
 
 ## Zero-downtime upgrades
 

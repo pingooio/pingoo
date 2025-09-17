@@ -10,8 +10,8 @@ url: "/docs/getting-started"
 Here is an example of using Pingoo:
 - For TLS termination
 - To serve a static web app
-- As a load balancer and WAF for Docker containers serving an API
-- Block requests from some countries
+- As a load balancer for Docker containers serving an API
+- As a WAF to block requests from some countries
 
 **pingoo.yml**
 ```yml

@@ -7,7 +7,7 @@ url: "/contact"
 
 # Contact
 
-While we generally prefer working in the open on [GitHub](https://github.com/pingooio/pingoo/issues), you can privately reach us at [hello@pingoo.io](mailto:hello@pingoo.io) if you have special requirements or a private request.
+While we prefer working in the open on [GitHub](https://github.com/pingooio/pingoo/issues), you can privately reach us at [hello@pingoo.io](mailto:hello@pingoo.io) if you have special requirements or a private request.
 
 ## Security
 
