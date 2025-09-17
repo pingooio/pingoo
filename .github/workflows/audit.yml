@@ -2,6 +2,8 @@ name: audit dependencies
 
 on:
   push:
+    branches:
+      - ['**']
 
 jobs:
   audit-pingoo:
