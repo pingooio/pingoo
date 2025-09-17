@@ -37,11 +37,10 @@ impl FromStr for ListType {
     type Err = Error;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let value = value.to_ascii_lowercase();
-        match value.as_str() {
-            "int" => Ok(Self::Int),
-            "ip" => Ok(Self::Ip),
-            "string" => Ok(Self::String),
+        match value {
+            "Int" => Ok(Self::Int),
+            "Ip" => Ok(Self::Ip),
+            "String" => Ok(Self::String),
             _ => Err(Error::Unspecified(format!("{value} is not a valid ListType"))),
         }
     }
