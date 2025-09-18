@@ -1,6 +1,8 @@
 use std::{net::SocketAddr, sync::Arc};
 
-use hyper_util::rt::TokioIo;
+use hyper_util::{rt::TokioIo, server::graceful};
+use tokio::sync::watch;
+use tracing::debug;
 
 use crate::{
     Error,
@@ -8,8 +10,8 @@ use crate::{
     config::ListenerConfig,
     geoip::GeoipDB,
     listeners::{
-        Listener, SupportedHttpProtocols, accept_tcp_connection, accept_tls_connection, bind_tcp_socket,
-        http_listener::serve_http_requests,
+        GRACEFUL_SHUTDOWN_TIMEOUT, Listener, SupportedHttpProtocols, accept_tcp_connection, accept_tls_connection,
+        bind_tcp_socket, http_listener::serve_http_requests,
     },
     rules::Rule,
     services::HttpService,
@@ -60,45 +62,65 @@ impl Listener for HttpsListener {
         return Ok(());
     }
 
-    async fn listen(self: Box<Self>) {
+    async fn listen(self: Box<Self>, mut shutdown_signal: watch::Receiver<()>) {
         let tcp_socket = self
             .socket
             .expect("You need to bind the listener before calling listen()");
 
-        loop {
-            loop {
-                let (tcp_stream, client_socket_addr) = match accept_tcp_connection(&tcp_socket, &self.name).await {
-                    Ok(connection) => connection,
-                    Err(_) => continue,
-                };
+        // see HTTP listener to learn how graceful shutdown works for HTTP requests
+        let graceful_shutdown = graceful::GracefulShutdown::new();
 
-                let tls_stream =
-                    match accept_tls_connection(tcp_stream, self.cert_manager.clone(), client_socket_addr, &self.name)
-                        .await
+        loop {
+            tokio::select! {
+                accept_tcp_res = accept_tcp_connection(&tcp_socket, &self.name) => {
+                    let (tcp_stream, client_socket_addr) = match accept_tcp_res {
+                        Ok(connection) => connection,
+                        Err(_) => continue,
+                    };
+
+                    let tls_stream = match accept_tls_connection(
+                        tcp_stream,
+                        self.cert_manager.clone(),
+                        client_socket_addr,
+                        &self.name,
+                    )
+                    .await
                     {
                         Ok(tls_stream) => tls_stream,
                         Err(_) => continue,
                     };
 
-                // We currently only support HTTP/2 requests for TLS connections.
-                // HTTP/2 was introduced in 2015 and is supported by virtually all browsers
-                // and client libraries: https://caniuse.com/http2
-                // Only unmaintained bots don't support HTTP/2
-                // Clients are informed of this via the ALPN TLS field.
-                tokio::spawn(serve_http_requests(
-                    TokioIo::new(tls_stream),
-                    self.services.clone(),
-                    client_socket_addr,
-                    self.address,
-                    self.name.clone(),
-                    SupportedHttpProtocols::Http2,
-                    self.rules.clone(),
-                    self.lists.clone(),
-                    self.geoip.clone(),
-                    self.captcha_manager.clone(),
-                    true,
-                ));
+                    // We currently only support HTTP/2 requests for TLS connections.
+                    // HTTP/2 was introduced in 2015 and is supported by virtually all browsers
+                    // and client libraries: https://caniuse.com/http2
+                    // Only unmaintained bots don't support HTTP/2
+                    // Clients are informed of this via the ALPN TLS field.
+                    tokio::spawn(serve_http_requests(
+                        TokioIo::new(tls_stream),
+                        self.services.clone(),
+                        client_socket_addr,
+                        self.address,
+                        self.name.clone(),
+                        SupportedHttpProtocols::Http2,
+                        self.rules.clone(),
+                        self.lists.clone(),
+                        self.geoip.clone(),
+                        self.captcha_manager.clone(),
+                        true,
+                        graceful_shutdown.watcher(),
+                    ));
+                },
+                _ = shutdown_signal.changed() => {
+                    break;
+                }
             }
+        }
+
+        tokio::select! {
+            _ = graceful_shutdown.shutdown() => {
+                debug!("listener {} has gracefully shut down", self.name);
+            },
+            _ = tokio::time::sleep(GRACEFUL_SHUTDOWN_TIMEOUT) => {}
         }
     }
 }

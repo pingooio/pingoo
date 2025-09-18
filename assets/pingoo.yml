@@ -13,7 +13,7 @@ services:
 rules:
   captcha_bots:
     expression: |
-      !request.user_agent.starts_with("Mozilla/") && !request.user_agent.contains("curl/")
+      !http_request.user_agent.starts_with("Mozilla/") && !http_request.user_agent.contains("curl/")
     actions:
       - action: captcha
         parameters: {}

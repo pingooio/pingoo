@@ -1,11 +1,12 @@
 use std::{
     net::{IpAddr, SocketAddr},
     sync::Arc,
+    time::Duration,
 };
 
 use rustls::server::Acceptor;
 use socket2::{Domain, Socket, Type};
-use tokio::net::TcpStream;
+use tokio::{net::TcpStream, sync::watch};
 use tokio_rustls::{LazyConfigAcceptor, server::TlsStream};
 use tracing::debug;
 
@@ -21,11 +22,13 @@ pub use https_listener::HttpsListener;
 pub use tcp_listener::TcpListener;
 pub use tcp_tls_listener::TcpAndTlsListener;
 
+pub const GRACEFUL_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(20);
+
 /// Listeners handle connections and dispatch HTTP requests to services
 #[async_trait::async_trait]
 pub trait Listener: Send + Sync {
     fn bind(&mut self) -> Result<(), Error>;
-    async fn listen(self: Box<Self>);
+    async fn listen(self: Box<Self>, shutdown_signal: watch::Receiver<()>);
 }
 
 enum SupportedHttpProtocols {

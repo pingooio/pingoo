@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use futures::future::join_all;
+use tokio::{sync::watch, task::JoinSet};
 
 use crate::{
     captcha::CaptchaManager,
@@ -30,8 +30,8 @@ impl Server {
         return Server { config: config };
     }
 
-    pub async fn run(self) -> Result<(), Error> {
-        let mut listeners_handles = Vec::with_capacity(self.config.listeners.len());
+    pub async fn run(self, shutdown_signal: watch::Receiver<()>) -> Result<(), Error> {
+        let mut listeners_handles = JoinSet::new();
 
         let service_registry =
             Arc::new(ServiceRegistry::new(&self.config.service_discovery, &self.config.services).await?);
@@ -137,11 +137,10 @@ impl Server {
             info!("Starting listener {listener_name} on {listener_protocol}://{listener_address}");
 
             listener.bind()?;
-            let listener_handle = tokio::spawn(listener.listen());
-            listeners_handles.push(listener_handle);
+            listeners_handles.spawn(listener.listen(shutdown_signal.clone()));
         }
 
-        join_all(listeners_handles).await;
+        listeners_handles.join_all().await;
 
         return Ok(());
     }

@@ -1,7 +1,7 @@
 use std::process::Stdio;
 
-use tokio::process::Command;
-use tracing::debug;
+use tokio::{process::Command, signal, sync::watch};
+use tracing::{debug, info};
 use tracing_subscriber::{EnvFilter, Layer, layer::SubscriberExt, util::SubscriberInitExt};
 
 mod config;
@@ -22,7 +22,7 @@ mod tls;
 
 pub use error::Error;
 
-use crate::server::Server;
+use crate::{listeners::GRACEFUL_SHUTDOWN_TIMEOUT, server::Server};
 
 // We don't use mimalloc in debug builds to speedup compilation
 // #[cfg(not(debug_assertions))]
@@ -46,6 +46,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map_err(|err| Error::Config(format!("error setting up rustls crypto provider: {err:?}")))?;
 
     let config = config::load_and_validate(None)?;
+
+    let (shutdown_tx, shutdown_rx) = watch::channel(());
+    tokio::spawn(shutdown_signal(shutdown_tx));
 
     match &config.child_process {
         None => {}
@@ -72,8 +75,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let server = Server::new(config);
-    server.run().await?;
+    Server::new(config).run(shutdown_rx).await?;
 
     return Ok(());
+}
+
+async fn shutdown_signal(shutdown_tx: watch::Sender<()>) {
+    let ctrl_c = async {
+        signal::ctrl_c().await.expect("failed to install Ctrl+C handler");
+    };
+
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    };
+
+    info!(timeout =?GRACEFUL_SHUTDOWN_TIMEOUT, "Shutdown signal received. Shutting down listeners.");
+
+    let _ = shutdown_tx.send(());
 }

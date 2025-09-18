@@ -3,11 +3,12 @@ use std::{net::SocketAddr, sync::Arc};
 use ::rules::Action;
 use cookie::Cookie;
 use http::StatusCode;
-use hyper::{server::conn::http2, service::service_fn};
+use hyper::service::service_fn;
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
-    server::conn::auto,
+    server::{conn::auto, graceful},
 };
+use tokio::sync::watch;
 use tracing::{debug, error};
 
 use crate::{
@@ -15,7 +16,7 @@ use crate::{
     captcha::{CAPTCHA_VERIFIED_COOKIE, CaptchaManager, generate_captcha_client_id},
     config::ListenerConfig,
     geoip::{self, GeoipDB, GeoipRecord},
-    listeners::{Listener, SupportedHttpProtocols, accept_tcp_connection, bind_tcp_socket},
+    listeners::{GRACEFUL_SHUTDOWN_TIMEOUT, Listener, SupportedHttpProtocols, accept_tcp_connection, bind_tcp_socket},
     request_context::RequestContext,
     rules,
     services::{
@@ -66,30 +67,52 @@ impl Listener for HttpListener {
         return Ok(());
     }
 
-    async fn listen(self: Box<Self>) {
+    async fn listen(self: Box<Self>, mut shutdown_signal: watch::Receiver<()>) {
         let tcp_socket = self
             .socket
             .expect("You need to bind the listener before calling listen()");
 
-        loop {
-            let (tcp_stream, client_socket_addr) = match accept_tcp_connection(&tcp_socket, &self.name).await {
-                Ok(connection) => connection,
-                Err(_) => continue,
-            };
+        // GracefulShutdown watches individual connections. It can be awaited by calling `.shutdown()`
+        // which resolves once all in-flight connections have completed.
+        // references:
+        // - https://docs.rs/hyper-util/latest/hyper_util/server/graceful/struct.GracefulShutdown.html
+        // - https://github.com/hyperium/hyper-util/blob/master/examples/server_graceful.rs
+        let graceful_shutdown = graceful::GracefulShutdown::new();
 
-            tokio::task::spawn(serve_http_requests(
-                TokioIo::new(tcp_stream),
-                self.services.clone(),
-                client_socket_addr,
-                self.address,
-                self.name.clone(),
-                SupportedHttpProtocols::Http11AndHttp2,
-                self.rules.clone(),
-                self.lists.clone(),
-                self.geoip.clone(),
-                self.captcha_manager.clone(),
-                false,
-            ));
+        loop {
+            tokio::select! {
+                accept_tcp_res = accept_tcp_connection(&tcp_socket, &self.name) => {
+                    let (tcp_stream, client_socket_addr) = match accept_tcp_res {
+                        Ok(connection) => connection,
+                        Err(_) => continue,
+                    };
+
+                    tokio::task::spawn(serve_http_requests(
+                        TokioIo::new(tcp_stream),
+                        self.services.clone(),
+                        client_socket_addr,
+                        self.address,
+                        self.name.clone(),
+                        SupportedHttpProtocols::Http11AndHttp2,
+                        self.rules.clone(),
+                        self.lists.clone(),
+                        self.geoip.clone(),
+                        self.captcha_manager.clone(),
+                        false,
+                        graceful_shutdown.watcher(),
+                    ));
+                },
+                _ = shutdown_signal.changed() => {
+                    break;
+                }
+            }
+        }
+
+        tokio::select! {
+            _ = graceful_shutdown.shutdown() => {
+                debug!("listener {} has gracefully shut down", self.name);
+            },
+            _ = tokio::time::sleep(GRACEFUL_SHUTDOWN_TIMEOUT) => {}
         }
     }
 }
@@ -106,6 +129,7 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
     geoip: Option<Arc<GeoipDB>>,
     captcha_manager: Arc<CaptchaManager>,
     use_tls: bool,
+    graceful_shutdown_watcher: graceful::Watcher,
 ) {
     let hyper_handler = service_fn(move |mut req| {
         let services = services.clone();
@@ -247,25 +271,20 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
         }
     });
 
+    let mut connection_handler = auto::Builder::new(TokioExecutor::new());
     match supported_protocols {
         SupportedHttpProtocols::Http2 => {
-            if let Err(err) = http2::Builder::new(TokioExecutor::new())
-                .serve_connection(tcp_stream, hyper_handler)
-                .await
-            {
-                error!(listener = listener_name.as_ref(), "error serving HTTP/2 connection: {err:?}");
-            };
+            connection_handler.http2_only();
         }
         SupportedHttpProtocols::Http11AndHttp2 => {
-            if let Err(err) = auto::Builder::new(TokioExecutor::new())
-                .serve_connection_with_upgrades(tcp_stream, hyper_handler)
-                .await
-            {
-                error!(
-                    listener = listener_name.as_ref(),
-                    "error serving HTTP/1.1 and HTTP/2 connection: {err:?}"
-                );
-            };
+            connection_handler.http1();
         }
-    }
+    };
+
+    if let Err(err) = graceful_shutdown_watcher
+        .watch(auto::Builder::new(TokioExecutor::new()).serve_connection_with_upgrades(tcp_stream, hyper_handler))
+        .await
+    {
+        error!(listener = listener_name.as_ref(), "error serving HTTP connection: {err:?}");
+    };
 }
