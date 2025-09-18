@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --strictPort --port 8002 --host",
+    "dev": "vite --strictPort --port 8082 --host",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
