@@ -55,8 +55,8 @@ compress_geoip_db:
 .PHONY: build
 build:
 	mkdir -p $(DIST_DIR)
-	cargo build -p pingoo
-	cp target/debug/pingoo $(DIST_DIR)/
+	cargo build -p pingoo --release
+	cp target/release/pingoo $(DIST_DIR)/
 	strip --strip-all -xX $(DIST_DIR)/pingoo
 
 

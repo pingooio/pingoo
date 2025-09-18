@@ -80,7 +80,7 @@ RUN chown -R $USER:$USER /etc/pingoo_data
 ####################################################################################################
 ## Final image
 ####################################################################################################
-FROM alpine
+FROM scratch
 
 # /etc/nsswitch.conf and resolv.conf may be used by some DNS resolvers
 # /etc/mime.types may be used to detect the MIME type of files
