@@ -97,7 +97,7 @@ async fn shutdown_signal(shutdown_tx: watch::Sender<()>) {
         _ = terminate => {},
     };
 
-    info!(timeout =?GRACEFUL_SHUTDOWN_TIMEOUT, "Shutdown signal received. Shutting down listeners.");
+    info!(timeout = ?GRACEFUL_SHUTDOWN_TIMEOUT, "Shutdown signal received. Shutting down listeners.");
 
     let _ = shutdown_tx.send(());
 }

@@ -29,13 +29,13 @@ Pingoo only support HTTP/2 (and QUIC with HTTP/3 soon) on `https` listeners, on 
 
 ## Graceful shutdown
 
-When receiving a `Ctrl+C` / `terminate` signal, listeners initiate the graceful shutdown process. They first stop accepting new connections / requests and then wait up to 20 seconds (may change in the future) for in-flight connections / request to finish.
+When receiving a `Ctrl+C` / `terminate` signal, listeners initiate the graceful shutdown process. They first stop accepting new connections / requests and then wait up to 20 seconds (this may change in the future) for in-flight connections / request to finish.
 
 ## Zero-downtime upgrades
 
-Pingoo uses the `SO_REUSEPORT` option on sockets to enable zero-downtime upgrades
+Pingoo uses the `SO_REUSEPORT` option on sockets to enable zero-downtime upgrades.
 
-If you are using docker you will need to use the `--network host` CLI argument to use zer-downtime upgrade with `SO_REUSEPORT`.
+If you are using docker you will need to use the `--network host` CLI argument to use zero-downtime upgrades with `SO_REUSEPORT`.
 
 ```bash
 $ docker run -d --network host ghcr.io/pingooio/pingoo

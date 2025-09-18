@@ -6,6 +6,7 @@ type: "page"
 url: "/"
 ---
 
+# Pingoo Overview
 
 99.9999 % of the web uses some kind of reverse proxy or gateway, trillions of requests per day, whether it is to balance load between different services / machines, terminate TLS, apply security rules or block unwarranted traffic. And yet, this fundamental piece of infrastructure has seen very little love and innovation over the years, especially since the beginning of the AI <s>bubble</s> boom.
 
