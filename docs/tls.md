@@ -25,11 +25,16 @@ If no certificate is found for the requested domain, a default self-signed certi
 
 
 
-## TLS version support
+## TLS versions support
 
 By design, Pingoo only supports TLS 1.3 (and up in the future).
 
 TLS 1.3 was introduced in 2018 and is supported by virtually all browsers and client libraries: https://caniuse.com/tls1-3. Only abandonned bots don't support TLS 1.3, therefore it makes no sense to reduce the security of everybody to support these bots.
+
+
+## Post-Quantum TLS
+
+Pingoo supports post-quantum cryptography (also known as quantum-resistant cryptography), specifically the `X25519MLKEM768` hybrid key agreement. See [IETF's draft-ietf-tls-ecdhe-mlkem](https://datatracker.ietf.org/doc/draft-ietf-tls-ecdhe-mlkem/) for more information.
 
 
 ## Security

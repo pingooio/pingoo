@@ -29,7 +29,7 @@ navigation:
     - label: Services
       url: "/docs/services"
 
-    - label: Rules & Lists
+    - label: Rules, Lists & WAF
       url: "/docs/rules"
 
     - label: Geoip

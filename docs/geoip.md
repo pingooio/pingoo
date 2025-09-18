@@ -36,3 +36,9 @@ You can download the latest GeoIP database that we provide for free here: [https
 Pingoo supports geoip databases compressed with [zstd](https://github.com/facebook/zstd).
 
 Compressed geoip databases must have the `.zst` extension e.g. `geoip.mmdb.zst`
+
+
+
+## Acknowledgment
+
+Some of our GeoIP data are kindly provided by ipinfo.io under the [Create Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/) license.
