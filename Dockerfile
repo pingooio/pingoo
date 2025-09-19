@@ -106,6 +106,8 @@ COPY --from=pingoo_build /pingoo/dist/pingoo /bin/pingoo
 # Use an unprivileged user
 USER pingoo:pingoo
 
+# the scratch image doesn't have a /tmp folder so we need to create it
+WORKDIR /tmp
 WORKDIR /pingoo
 
 ENTRYPOINT ["/bin/pingoo"]
