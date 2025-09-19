@@ -14,7 +14,7 @@ pub struct GeoipDB {
     cache: Cache<IpAddr, GeoipRecord>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Copy)]
 pub struct GeoipRecord {
     #[serde(deserialize_with = "deserialize_asn")]
     pub asn: u32,

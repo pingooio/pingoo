@@ -8,12 +8,3 @@ services:
   static_site:
     static:
       root: /var/wwww
-
-
-rules:
-  captcha_bots:
-    expression: |
-      !http_request.user_agent.starts_with("Mozilla/") && !http_request.user_agent.contains("curl/")
-    actions:
-      - action: captcha
-        parameters: {}

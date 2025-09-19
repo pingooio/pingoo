@@ -2,7 +2,6 @@ use std::{net::SocketAddr, sync::Arc};
 
 use ::rules::Action;
 use cookie::Cookie;
-use http::StatusCode;
 use hyper::service::service_fn;
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
@@ -267,7 +266,7 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
                 }
             }
 
-            return Ok::<_, crate::Error>(new_not_found_error(StatusCode::NOT_FOUND));
+            return Ok::<_, crate::Error>(new_not_found_error());
         }
     });
 

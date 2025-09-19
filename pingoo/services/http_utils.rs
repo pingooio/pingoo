@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use bytes::Bytes;
-use http::{Request, Response, StatusCode};
+use http::{HeaderValue, Request, Response, StatusCode, header};
 use http_body_util::{BodyExt, Full, combinators::BoxBody};
 use hyper::body::Incoming;
 use serde::Serialize;
@@ -12,6 +12,10 @@ use crate::{
     service_discovery::service_registry::ServiceRegistry,
     services::{HttpService, http_proxy_service::HttpProxyService, http_static_site_service::StaticSiteService},
 };
+
+pub const CACHE_CONTROL_NO_CACHE: HeaderValue =
+    HeaderValue::from_static("private, no-cache, no-store, must-revalidate");
+pub const CACHE_CONTROL_DYNAMIC: HeaderValue = HeaderValue::from_static("public, no-cache, must-revalidate");
 
 #[derive(Clone)]
 pub struct RequestExtensionContext(pub RequestContext);
@@ -38,7 +42,8 @@ pub fn new_internal_error_response_500() -> Response<BoxBody<Bytes, hyper::Error
         .map_err(|never| match never {})
         .boxed();
     return Response::builder()
-        .status(500)
+        .status(StatusCode::INTERNAL_SERVER_ERROR)
+        .header(header::CACHE_CONTROL, &CACHE_CONTROL_NO_CACHE)
         .body(res_body)
         .expect("error building new_internal_error_response_500");
 }
@@ -50,18 +55,20 @@ pub fn new_bad_gateway_error() -> Response<BoxBody<Bytes, hyper::Error>> {
         .map_err(|never| match never {})
         .boxed();
     return Response::builder()
-        .status(502)
+        .status(StatusCode::BAD_GATEWAY)
+        .header(header::CACHE_CONTROL, &CACHE_CONTROL_NO_CACHE)
         .body(res_body)
         .expect("error building new_bad_gateway_error");
 }
 
-pub fn new_not_found_error(status_code: StatusCode) -> Response<BoxBody<Bytes, hyper::Error>> {
+pub fn new_not_found_error() -> Response<BoxBody<Bytes, hyper::Error>> {
     const NOT_FOUND_ERROR_MESSAGE: &[u8] = b"404 Not Found.";
     let res_body = Full::new(Bytes::from_static(NOT_FOUND_ERROR_MESSAGE))
         .map_err(|never| match never {})
         .boxed();
     return Response::builder()
-        .status(status_code)
+        .status(StatusCode::NOT_FOUND)
+        .header(header::CACHE_CONTROL, &CACHE_CONTROL_NO_CACHE)
         .body(res_body)
         .expect("error building new_not_found_error_404");
 }
@@ -73,8 +80,21 @@ pub fn new_blocked_response() -> Response<BoxBody<Bytes, hyper::Error>> {
         .boxed();
     return Response::builder()
         .status(StatusCode::FORBIDDEN)
+        .header(header::CACHE_CONTROL, &CACHE_CONTROL_NO_CACHE)
         .body(res_body)
         .expect("error building blocked_response");
+}
+
+pub fn new_method_not_allowed_error() -> Response<BoxBody<Bytes, hyper::Error>> {
+    const ERROR_MESSAGE: &[u8] = b"405 Method Not Allowed";
+    let res_body = Full::new(Bytes::from_static(ERROR_MESSAGE))
+        .map_err(|never| match never {})
+        .boxed();
+    return Response::builder()
+        .status(StatusCode::METHOD_NOT_ALLOWED)
+        .header(header::CACHE_CONTROL, &CACHE_CONTROL_NO_CACHE)
+        .body(res_body)
+        .expect("error building new_method_not_allowed_error");
 }
 
 pub fn get_path(req: &Request<Incoming>) -> &str {

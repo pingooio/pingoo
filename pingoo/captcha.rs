@@ -7,7 +7,7 @@ use aws_lc_rs::{
 use bytes::Bytes;
 use chrono::Utc;
 use cookie::Cookie;
-use http::{HeaderValue, Request, Response, StatusCode, header};
+use http::{HeaderValue, Request, Response, header};
 use http_body_util::{BodyExt, Full, combinators::BoxBody};
 use hyper::body::Incoming;
 use mime_guess::mime;
@@ -176,7 +176,7 @@ impl CaptchaManager {
             return self.api_verify(req, cookies, client_id).await;
         }
 
-        return new_not_found_error(StatusCode::NOT_FOUND);
+        return new_not_found_error();
     }
 
     pub fn serve_captcha(&self) -> Response<BoxBody<Bytes, hyper::Error>> {
@@ -406,7 +406,7 @@ impl CaptchaManager {
                     .body(res_body)
                     .expect("error building captcha asset response");
             }
-            None => return new_not_found_error(StatusCode::NOT_FOUND),
+            None => return new_not_found_error(),
         }
     }
 }
