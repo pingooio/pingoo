@@ -19,9 +19,7 @@ Pingoo uses the `/etc/pingoo/certificates` directory to load and store TLS certi
 
 ## Configuration File
 
-Pingoo checks for its configuration file in the following locations (in this order):
-- `pingoo.yml`
-- `/etc/pingoo/pingoo.yml`
+Pingoo's configuration file is located at `/etc/pingoo/pingoo.yml`
 
 
 

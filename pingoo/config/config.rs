@@ -165,17 +165,18 @@ impl fmt::Display for ListenerProtocol {
     }
 }
 
-pub fn load_and_validate(config_file_path: Option<String>) -> Result<Config, Error> {
+pub fn load_and_validate() -> Result<Config, Error> {
     // first read and deserialize the configuration file into a `ConfigFile` struct
     // then convert it into a `Config` struct
     // finally, validate the configuration
 
-    let (config_file_path, raw_config) = read_config_file(config_file_path)?;
+    let raw_config = fs::read(DEFAULT_CONFIG_PATH)
+        .map_err(|err| Error::Config(format!("error reading config file ({DEFAULT_CONFIG_PATH}): {err}")))?;
 
-    info!("configuration successfully loaded from {config_file_path}");
+    info!("configuration successfully loaded from {DEFAULT_CONFIG_PATH}");
 
     let config_file: ConfigFile = serde_yaml::from_slice(&raw_config)
-        .map_err(|err| Error::Config(format!("error parsing config file ({config_file_path}): {err}")))?;
+        .map_err(|err| Error::Config(format!("error parsing config file ({DEFAULT_CONFIG_PATH}): {err}")))?;
 
     let services: IndexMap<String, ServiceConfig> = config_file
         .services
@@ -256,31 +257,6 @@ pub fn load_and_validate(config_file_path: Option<String>) -> Result<Config, Err
     };
 
     return Ok(config);
-}
-
-fn read_config_file(path: Option<String>) -> Result<(String, Vec<u8>), Error> {
-    match path {
-        Some(config_file_path) => Ok((
-            config_file_path.clone(),
-            fs::read(&config_file_path)
-                .map_err(|err| Error::Config(format!("error reading config file ({config_file_path}): {err}")))?,
-        )),
-        None => {
-            for config_file_path in ["pingoo.yml", "/etc/pingoo/pingoo.yml"] {
-                if fs::exists(config_file_path)
-                    .map_err(|err| Error::Config(format!("error reading config file ({config_file_path}): {err}")))?
-                {
-                    return Ok((
-                        config_file_path.to_string(),
-                        fs::read(config_file_path).map_err(|err| {
-                            Error::Config(format!("error reading config file ({config_file_path}): {err}"))
-                        })?,
-                    ));
-                }
-            }
-            return Err(Error::Config("config file not found".to_string()));
-        }
-    }
 }
 
 fn validate_listeners_config(

@@ -70,6 +70,7 @@ RUN adduser \
     "${USER}"
 
 RUN mkdir -p /etc/pingoo
+RUN mkdir -p /etc/pingoo/rules
 COPY ./assets/pingoo.yml /etc/pingoo/pingoo.yml
 RUN chown -R $USER:$USER /etc/pingoo
 
@@ -77,9 +78,6 @@ WORKDIR /etc/pingoo_data
 RUN wget https://downloads.pingoo.io/geoip.mmdb.zst
 RUN chown -R $USER:$USER /etc/pingoo_data
 
-# # The scratch image doesn't have a /tmp folder so we need to create it
-# RUN mkdir -p /pingoo/tmp
-# RUN chmod 777 /pingoo/tmp
 
 ####################################################################################################
 ## Final image
@@ -99,7 +97,6 @@ COPY --from=builder_files \
 
 COPY --from=builder_files /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder_files /usr/share/zoneinfo /usr/share/zoneinfo
-# COPY --from=builder_files /pingoo/tmp /tmp
 
 COPY --from=builder_files --chown=pingoo:pingoo /etc/pingoo /etc/pingoo
 COPY --from=builder_files --chown=pingoo:pingoo /etc/pingoo_data /etc/pingoo_data
