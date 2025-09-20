@@ -25,7 +25,8 @@ use crate::{
 pub struct ConfigFile {
     pub listeners: IndexMap<String, ListenerConfigFile>,
     pub services: IndexMap<String, ServiceConfigFile>,
-    pub rules: Option<IndexMap<String, RuleConfigFile>>,
+    #[serde(default)]
+    pub rules: IndexMap<String, RuleConfigFile>,
     pub tls: Option<TlsConfig>,
     pub service_discovery: Option<ServiceDiscoveryConfig>,
     pub lists: Option<IndexMap<String, ListConfig>>,

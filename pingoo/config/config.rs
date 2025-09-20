@@ -14,14 +14,15 @@ use tracing::info;
 
 use crate::{
     Error,
-    config::config_file::{ConfigFile, parse_service},
+    config::config_file::{ConfigFile, RuleConfigFile, parse_service},
     lists::ListType,
     rules::Rule,
     service_discovery::service_registry::Upstream,
 };
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-pub const DEFAULT_CONFIG_PATH: &str = "/etc/pingoo/pingoo.yml";
+pub const DEFAULT_CONFIG_FILE: &str = "/etc/pingoo/pingoo.yml";
+pub const DEFAULT_CONFIG_FOLDER: &str = "/etc/pingoo";
 pub const DEFAULT_TLS_FOLDER: &str = "/etc/pingoo/certificates";
 pub const GEOIP_DATABASE_PATHS: &[&str] = &[
     "/etc/pingoo/geoip.mmdb",
@@ -170,13 +171,22 @@ pub fn load_and_validate() -> Result<Config, Error> {
     // then convert it into a `Config` struct
     // finally, validate the configuration
 
-    let raw_config = fs::read(DEFAULT_CONFIG_PATH)
-        .map_err(|err| Error::Config(format!("error reading config file ({DEFAULT_CONFIG_PATH}): {err}")))?;
+    let raw_config = fs::read(DEFAULT_CONFIG_FILE)
+        .map_err(|err| Error::Config(format!("error reading config file ({DEFAULT_CONFIG_FILE}): {err}")))?;
 
-    info!("configuration successfully loaded from {DEFAULT_CONFIG_PATH}");
+    info!("configuration successfully loaded from {DEFAULT_CONFIG_FILE}");
 
-    let config_file: ConfigFile = serde_yaml::from_slice(&raw_config)
-        .map_err(|err| Error::Config(format!("error parsing config file ({DEFAULT_CONFIG_PATH}): {err}")))?;
+    let mut config_file: ConfigFile = serde_yaml::from_slice(&raw_config)
+        .map_err(|err| Error::Config(format!("error parsing config file ({DEFAULT_CONFIG_FILE}): {err}")))?;
+
+    let rules_from_folder = load_rules()?;
+    if let Some(duplicate_rule_name) = find_duplicate2(
+        rules_from_folder.iter().map(|(rule_name, _)| rule_name),
+        config_file.rules.iter().map(|(rule_name, _)| rule_name),
+    ) {
+        return Err(Error::Config(format!("duplicate rule name: {duplicate_rule_name}")));
+    }
+    config_file.rules.extend(rules_from_folder);
 
     let services: IndexMap<String, ServiceConfig> = config_file
         .services
@@ -220,7 +230,6 @@ pub fn load_and_validate() -> Result<Config, Error> {
 
     let rules: Vec<Rule> = config_file
         .rules
-        .unwrap_or_default()
         .into_iter()
         .map(|(rule_name, rule_config)| {
             Ok(Rule {
@@ -312,6 +321,48 @@ fn validate_listeners_config(
     return Ok(());
 }
 
+fn load_rules() -> Result<IndexMap<String, RuleConfigFile>, Error> {
+    let mut ret = IndexMap::new();
+
+    let rules_folder_path = PathBuf::from(DEFAULT_CONFIG_FOLDER).join("rules");
+
+    let rule_dir = match fs::read_dir(&rules_folder_path) {
+        Ok(rule_dir) => rule_dir,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(ret),
+        Err(err) => {
+            return Err(Error::Config(format!(
+                "error reading rules folder {rules_folder_path:?}: {err}"
+            )));
+        }
+    };
+
+    for file in rule_dir.into_iter().filter_map(|entry| entry.ok()).filter(|entry| {
+        entry
+            .path()
+            .extension()
+            .map(|ext| ext.to_str().unwrap_or_default())
+            .unwrap_or_default()
+            == "yml"
+    }) {
+        let rule_file_content = fs::read(file.path())
+            .map_err(|err| Error::Config(format!("error reading rules file {:?}: {err}", file.path())))?;
+
+        let rules: IndexMap<String, RuleConfigFile> = serde_yaml::from_slice(&rule_file_content)
+            .map_err(|err| Error::Config(format!("error parsing rules file {:?}: {err}", file.path())))?;
+
+        if let Some(duplicate_rule_name) = find_duplicate2(
+            rules.iter().map(|(rule_name, _)| rule_name),
+            ret.iter().map(|(rule_name, _)| rule_name),
+        ) {
+            return Err(Error::Config(format!("duplicate rule name: {duplicate_rule_name}")));
+        }
+
+        ret.extend(rules);
+    }
+
+    return Ok(ret);
+}
+
 fn find_duplicate<'a, T: Eq + std::hash::Hash>(v: &'a [T]) -> Option<&'a T> {
     let mut seen: HashSet<&T> = HashSet::new();
     for item in v {
@@ -320,6 +371,16 @@ fn find_duplicate<'a, T: Eq + std::hash::Hash>(v: &'a [T]) -> Option<&'a T> {
         }
     }
     None
+}
+
+fn find_duplicate2<I, J, T>(a: I, b: J) -> Option<T>
+where
+    I: IntoIterator<Item = T>,
+    J: IntoIterator<Item = T>,
+    T: Eq + std::hash::Hash + Clone,
+{
+    let set_a: HashSet<T> = a.into_iter().collect();
+    b.into_iter().find(|item| set_a.contains(item))
 }
 
 fn default_tls_folder() -> PathBuf {

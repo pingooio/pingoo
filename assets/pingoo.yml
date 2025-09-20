@@ -8,3 +8,11 @@ services:
   static_site:
     static:
       root: /var/wwww
+
+
+rules:
+  basic_waf:
+    expression: http_request.path.starts_with("/.env") || http_request.path.starts_with("/.git")
+    actions:
+      - action: block
+        parameters: {}

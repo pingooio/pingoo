@@ -7,6 +7,31 @@ url: "/docs/rules"
 
 # Rules
 
+Rules are are loaded from both the `/etc/pingoo/pingoo.yml` file and all the `.yml` file in the `/etc/pingoo/rules` folder.
+
+For example in **pingoo.yml**:
+```yml
+# ...
+
+rules:
+  block: # name of the rule
+    expression: http_request.path == "/blocked"
+    actions:
+      - action: block
+        parameters: {}
+```
+
+Or, in **/etc/pingoo/rules/blocked.yml**:
+```yml
+block: # name of the rule
+  expression: http_request.path == "/blocked"
+  actions:
+    - action: block
+      parameters: {}
+```
+
+
+
 ## Expression Language
 
 Pingoo uses a subset of the [Common Expression Language (CEL)](https://cel.dev) with all the inconsistencies and "surprising" things trimmed off.
