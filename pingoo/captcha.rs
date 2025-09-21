@@ -1,9 +1,6 @@
 use std::{collections::HashMap, net::IpAddr, sync::Arc, time::Duration};
 
-use aws_lc_rs::{
-    digest::{self, SHA256},
-    signature::Ed25519KeyPair,
-};
+use aws_lc_rs::digest::{self, SHA256};
 use bytes::Bytes;
 use chrono::Utc;
 use cookie::Cookie;
@@ -19,7 +16,6 @@ use uuid::Uuid;
 use crate::{
     Error, config,
     crypto_utils::constant_time_compare,
-    jwt_utils::{JwtKey, convert_jwk_to_key, convert_key_to_jwk},
     services::http_utils::{EmptyJsonBody, get_path, new_internal_error_response_500, new_not_found_error},
 };
 
@@ -39,8 +35,8 @@ const JWT_VALDIATION_OPTIONS: &jwt::ValidateOptions = &jwt::ValidateOptions {
 };
 
 pub struct CaptchaManager {
-    signing_key: Arc<JwtKey>,
-    verifying_keys: HashMap<String, Arc<JwtKey>>,
+    signing_key: Arc<jwt::Key>,
+    verifying_keys: HashMap<String, Arc<jwt::Key>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -97,7 +93,9 @@ impl CaptchaManager {
                 .into_iter()
                 .map(|jwk| {
                     validate_jwk(&jwk)?;
-                    convert_jwk_to_key(jwk).map(Arc::new)
+                    jwk.try_into()
+                        .map(Arc::<jwt::Key>::new)
+                        .map_err(|err| Error::Unspecified(err.to_string()))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
@@ -111,13 +109,9 @@ impl CaptchaManager {
         } else {
             // if the JWKS file doesn't exist, we create it
             let key_id = Uuid::new_v7().to_string();
-            let private_key = Ed25519KeyPair::generate().map_err(|err| {
+            let signing_key = Arc::new(jwt::Key::new_ed25519(key_id).map_err(|err| {
                 Error::Unspecified(format!("captcha: error generating captcha JWT signing key: {err}"))
-            })?;
-            let signing_key = Arc::new(JwtKey {
-                id: key_id,
-                private_key,
-            });
+            })?);
             save_jwt_keys(&[&signing_key], config::CAPTCHA_JWKS_PATH).await?;
             (signing_key.clone(), HashMap::from_iter([(signing_key.id.clone(), signing_key)]))
         };
@@ -147,7 +141,7 @@ impl CaptchaManager {
 
         // TODO: correct errors
         let token: jwt::ParsedJwt<CaptchaVerifiedCookieJwtClaims> =
-            jwt::parse_and_verify(&jwt_key.private_key, cookie_str, JWT_VALDIATION_OPTIONS)
+            jwt::parse_and_verify(&jwt_key, cookie_str, JWT_VALDIATION_OPTIONS)
                 .map_err(|err| Error::Unspecified(format!("JWT is not valid: {err}")))?;
 
         if !constant_time_compare(
@@ -278,7 +272,7 @@ impl CaptchaManager {
         };
 
         let challenge_token_claims: CaptchaCookieJwtClaims =
-            match jwt::parse_and_verify(&jwt_key.private_key, &captcha_jwt_from_cookie, JWT_VALDIATION_OPTIONS) {
+            match jwt::parse_and_verify(&jwt_key, &captcha_jwt_from_cookie, JWT_VALDIATION_OPTIONS) {
                 Ok(jwt) => jwt.claims,
                 Err(err) => {
                     debug!("JWT from captcha cookie is not valid: {err}");
@@ -427,7 +421,7 @@ pub fn generate_captcha_client_id(ip: IpAddr, user_agent: &str, hostname: &str) 
 }
 
 pub fn generate_captcha_cookie(
-    key: &JwtKey,
+    key: &jwt::Key,
     // key_id: Uuid,
     client_id: &str,
     challenge: &str,
@@ -461,7 +455,7 @@ pub fn generate_captcha_cookie(
         x5t_s256: None,
     };
 
-    let token = jwt::sign(&key.private_key, &header, &claims)?;
+    let token = jwt::sign(key, &header, &claims)?;
 
     let mut challenge_cookie = cookie::Cookie::new(CAPTCHA_COOKIE, token);
     challenge_cookie.set_secure(true);
@@ -475,7 +469,7 @@ pub fn generate_captcha_cookie(
 }
 
 pub fn generate_captcha_verified_cookies(
-    key: &JwtKey,
+    key: &jwt::Key,
     // key_id: Uuid,
     client_id: &str,
 ) -> Result<Vec<Cookie<'static>>, jwt::Error> {
@@ -506,7 +500,7 @@ pub fn generate_captcha_verified_cookies(
         x5t_s256: None,
     };
 
-    let token = jwt::sign(&key.private_key, &header, &claims)?;
+    let token = jwt::sign(&key, &header, &claims)?;
 
     let mut challenge_verified_cookie = cookie::Cookie::new(CAPTCHA_VERIFIED_COOKIE, token);
     challenge_verified_cookie.set_secure(true);
@@ -533,17 +527,38 @@ fn validate_jwk(jwk: &jwt::Jwk) -> Result<(), Error> {
         return Err(Error::Unspecified("JWK key ID is empty".to_string()));
     }
 
-    if jwk.alg != jwt::Algorithm::EdDSA {
+    if jwk.algorithm != jwt::Algorithm::EdDSA {
         return Err(Error::Unspecified(format!(
-            "captcha: JWT algorithm {} not suported for key {}. Only {} is currently supported.",
-            jwk.alg,
+            "captcha: JWT algorithm {:?} not suported for key {}. Only {:?} is currently supported.",
+            jwk.algorithm,
             jwk.kid,
             jwt::Algorithm::EdDSA
         )));
     }
 
-    if jwk.d.is_none() {
-        return Err(Error::Unspecified(format!("captcha: Private key is for key {}", jwk.kid)));
+    // TODO: validate x, y, d length
+    match &jwk.crypto {
+        jwt::JwkCrypto::Okp { curve: _, x: _, d } => {
+            if d.is_none() {
+                return Err(Error::Unspecified(format!(
+                    "captcha: Private key is missing for key {}",
+                    jwk.kid
+                )));
+            }
+        }
+        jwt::JwkCrypto::Ec {
+            curve: _,
+            x: _,
+            y: _,
+            d,
+        } => {
+            if d.is_none() {
+                return Err(Error::Unspecified(format!(
+                    "captcha: Private key is missing for key {}",
+                    jwk.kid
+                )));
+            }
+        }
     }
 
     // if jwk.kty != jwt::KeyType::OKP
@@ -552,9 +567,9 @@ fn validate_jwk(jwk: &jwt::Jwk) -> Result<(), Error> {
     return Ok(());
 }
 
-async fn save_jwt_keys(keys: &[&JwtKey], path: &str) -> Result<(), Error> {
+async fn save_jwt_keys(keys: &[&jwt::Key], path: &str) -> Result<(), Error> {
     let jwks = jwt::Jwks {
-        keys: keys.iter().map(|key| convert_key_to_jwk(key)).collect(),
+        keys: keys.iter().map(|&key| key.into()).collect(),
     };
 
     let jwks_json = serde_json::to_vec_pretty(&jwks)

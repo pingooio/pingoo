@@ -1,9 +1,9 @@
-#[derive(Debug, Clone, PartialEq)]
-pub struct Base64UrlNoPaddingBytes(pub Vec<u8>);
-
 use base64::{Engine as _, engine::general_purpose};
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Base64UrlNoPaddingBytes(pub Vec<u8>);
 
 impl Serialize for Base64UrlNoPaddingBytes {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

@@ -1,15 +1,15 @@
-use core::fmt;
 use std::{str::FromStr, time::Duration};
 
-use aws_lc_rs::signature::{ED25519, Ed25519KeyPair, KeyPair};
 use base64::Engine;
 use chrono::Utc;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 mod base64_utils;
 mod jwk;
+mod key;
 
 pub use jwk::*;
+pub use key::*;
 
 pub const ED25519_SIGNATURE_SIZE: usize = 64;
 
@@ -23,8 +23,14 @@ pub enum Error {
     Json(#[from] serde_json::Error),
     #[error("JWT is not valid")]
     InvalidToken,
+    #[error("JWSignatureT is not valid")]
+    InvalidSignature,
     #[error("{0} is not a valid elliptic curve")]
     InvalidEllipticCurve(String),
+    #[error("{kid} is not a valid JWK: {err}")]
+    InvalidJwk { kid: String, err: String },
+    #[error("{0}")]
+    Unspecified(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -134,7 +140,7 @@ pub enum TokenType {
 
 /// The algorithms supported for signing / verifying JWTs
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Default, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub enum Algorithm {
     /// HMAC using SHA-512
     // #[default]
@@ -146,6 +152,11 @@ pub enum Algorithm {
     /// Edwards-curve Digital Signature Algorithm (EdDSA)
     #[default]
     EdDSA,
+
+    /// ECDSA using P-256 and SHA-256
+    ES256,
+    /// ECDSA using P-521 and SHA-512
+    ES512,
 }
 
 #[derive(Debug, Clone)]
@@ -155,7 +166,7 @@ pub struct ParsedJwt<C: DeserializeOwned> {
     pub signature: [u8; ED25519_SIGNATURE_SIZE],
 }
 
-pub fn sign<C: Serialize>(key: &Ed25519KeyPair, header: &Header, claims: &C) -> Result<String, Error> {
+pub fn sign<C: Serialize>(key: &Key, header: &Header, claims: &C) -> Result<String, Error> {
     let mut jwt = String::with_capacity(100);
 
     jwt.push_str(&base64::encode_with_alphabet(
@@ -168,7 +179,7 @@ pub fn sign<C: Serialize>(key: &Ed25519KeyPair, header: &Header, claims: &C) -> 
         base64::Alphabet::UrlNoPadding,
     ));
 
-    let signature = key.sign(jwt.as_bytes());
+    let signature = key.sign(jwt.as_bytes())?;
     let signature_base64 = base64::encode_with_alphabet(signature.as_ref(), base64::Alphabet::UrlNoPadding);
 
     jwt.push('.');
@@ -193,7 +204,7 @@ pub fn parse_header(token: &str) -> Result<Header, Error> {
 }
 
 pub fn parse_and_verify<C: DeserializeOwned>(
-    key: &Ed25519KeyPair,
+    key: &Key,
     token: &str,
     valdiate_options: &ValidateOptions,
 ) -> Result<ParsedJwt<C>, Error> {
@@ -213,11 +224,7 @@ pub fn parse_and_verify<C: DeserializeOwned>(
         .map_err(|_| Error::InvalidToken)?;
 
     let signed_message = &token[..header_base64.len() + 1 + claims_base64.len()];
-    let public_key = aws_lc_rs::signature::ParsedPublicKey::new(&ED25519, key.public_key().as_ref())
-        .expect("error getting public key");
-    public_key
-        .verify_sig(signed_message.as_bytes(), &raw_signature)
-        .map_err(|_| Error::InvalidToken)?;
+    key.verify(signed_message.as_bytes(), &raw_signature)?;
 
     // TODO: validate header.
     // as of now, it's already validate by parsing, but if we start to accept more signing algorithms
@@ -327,24 +334,24 @@ impl FromStr for TokenType {
     }
 }
 
-impl FromStr for Algorithm {
-    type Err = Error;
+// impl FromStr for Algorithm {
+//     type Err = Error;
 
-    fn from_str(algo: &str) -> Result<Self, Self::Err> {
-        match algo {
-            // "HS512" => Ok(Algorithm::HS512),
-            // "PS256" => Ok(Algorithm::PS256),
-            "EdDSA" => Ok(Algorithm::EdDSA),
-            _ => Err(Error::InvalidAlgorithm(algo.to_string())),
-        }
-    }
-}
+//     fn from_str(algo: &str) -> Result<Self, Self::Err> {
+//         match algo {
+//             // "HS512" => Ok(Algorithm::HS512),
+//             "PS256" => Ok(Algorithm::PS256),
+//             "EdDSA" => Ok(Algorithm::EdDSA),
+//             _ => Err(Error::InvalidAlgorithm(algo.to_string())),
+//         }
+//     }
+// }
 
-impl fmt::Display for Algorithm {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let value = match self {
-            Algorithm::EdDSA => "EdDSA",
-        };
-        write!(f, "{value}")
-    }
-}
+// impl fmt::Display for Algorithm {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         let value = match self {
+//             Algorithm::EdDSA => "EdDSA",
+//         };
+//         write!(f, "{value}")
+//     }
+// }

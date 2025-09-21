@@ -11,7 +11,6 @@ mod captcha;
 mod crypto_utils;
 mod error;
 mod geoip;
-mod jwt_utils;
 mod listeners;
 mod lists;
 mod request_context;
