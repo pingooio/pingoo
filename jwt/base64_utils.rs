@@ -1,33 +1,49 @@
-use base64::{Engine as _, engine::general_purpose};
-use serde::de::Error as DeError;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+pub mod base64_url_no_padding {
+    use base64::{Engine, engine::general_purpose};
+    use serde::{Deserialize, Deserializer, Serializer};
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Base64UrlNoPaddingBytes(pub Vec<u8>);
-
-impl Serialize for Base64UrlNoPaddingBytes {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S, T>(bytes: T, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
+        T: AsRef<[u8]>,
     {
-        serializer.serialize_str(&general_purpose::URL_SAFE_NO_PAD.encode(&self.0))
+        let encoded = general_purpose::URL_SAFE_NO_PAD.encode(bytes.as_ref());
+        serializer.serialize_str(&encoded)
     }
-}
-impl<'de> Deserialize<'de> for Base64UrlNoPaddingBytes {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let value_str = String::deserialize(deserializer)?;
-        let v = general_purpose::URL_SAFE_NO_PAD
-            .decode(&value_str)
-            .map_err(|e| DeError::custom(format!("base64 decode error: {}", e)))?;
-        Ok(Base64UrlNoPaddingBytes(v))
+        let s = String::deserialize(deserializer)?;
+        general_purpose::URL_SAFE_NO_PAD
+            .decode(s.as_bytes())
+            .map_err(serde::de::Error::custom)
     }
-}
 
-impl From<Vec<u8>> for Base64UrlNoPaddingBytes {
-    fn from(value: Vec<u8>) -> Self {
-        Base64UrlNoPaddingBytes(value)
+    pub mod option {
+        use super::*;
+
+        pub fn serialize<S, T>(opt: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+            T: AsRef<[u8]>,
+        {
+            match opt {
+                Some(arr) => super::serialize(arr.as_ref(), serializer),
+                None => serializer.serialize_none(),
+            }
+        }
+
+        pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Vec<u8>>, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let opt: Option<String> = Option::deserialize(deserializer)?;
+            match opt {
+                None => Ok(None),
+                Some(s) => super::deserialize(serde::de::value::StringDeserializer::new(s)).map(Some),
+            }
+        }
     }
 }

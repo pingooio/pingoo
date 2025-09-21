@@ -1,4 +1,4 @@
-use std::{str::FromStr, time::Duration};
+use std::time::Duration;
 
 use base64::Engine;
 use chrono::Utc;
@@ -11,7 +11,7 @@ mod key;
 pub use jwk::*;
 pub use key::*;
 
-pub const ED25519_SIGNATURE_SIZE: usize = 64;
+const SIGNATURE_MAX_SIZE: usize = 132;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -131,23 +131,17 @@ pub struct ValidateOptions<'a> {
     pub iss: &'a [&'a str],
 }
 
-#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Default, PartialEq, Eq, Hash, Copy, Clone, Serialize, Deserialize)]
 pub enum TokenType {
     #[default]
-    Jwt,
+    JWT,
 }
 
 /// The algorithms supported for signing / verifying JWTs
-#[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(Copy, Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub enum Algorithm {
     /// HMAC using SHA-512
-    // #[default]
-    // HS512,
-
-    /// ECDSA using SHA-256
-    // ES256,
+    HS512,
 
     /// Edwards-curve Digital Signature Algorithm (EdDSA)
     #[default]
@@ -155,6 +149,7 @@ pub enum Algorithm {
 
     /// ECDSA using P-256 and SHA-256
     ES256,
+
     /// ECDSA using P-521 and SHA-512
     ES512,
 }
@@ -163,27 +158,39 @@ pub enum Algorithm {
 pub struct ParsedJwt<C: DeserializeOwned> {
     pub header: Header,
     pub claims: C,
-    pub signature: [u8; ED25519_SIGNATURE_SIZE],
+}
+
+impl Algorithm {
+    pub fn signature_size(&self) -> usize {
+        match self {
+            Algorithm::HS512 | Algorithm::EdDSA | Algorithm::ES256 => 64,
+            Algorithm::ES512 => 132,
+        }
+    }
 }
 
 pub fn sign<C: Serialize>(key: &Key, header: &Header, claims: &C) -> Result<String, Error> {
-    let mut jwt = String::with_capacity(100);
+    let header_base64 =
+        base64::encode_with_alphabet(serde_json::to_string(header)?.as_bytes(), base64::Alphabet::UrlNoPadding);
+    let claims_base64 =
+        base64::encode_with_alphabet(serde_json::to_string(claims)?.as_bytes(), base64::Alphabet::UrlNoPadding);
 
-    jwt.push_str(&base64::encode_with_alphabet(
-        serde_json::to_string(header)?.as_bytes(),
-        base64::Alphabet::UrlNoPadding,
-    ));
+    let mut jwt = String::with_capacity(
+        header_base64.len()
+            + claims_base64.len()
+            + base64::encoded_len(key.algorithm.signature_size(), false).expect("error getting base64 encoding length")
+            + 2,
+    );
+    jwt.push_str(&header_base64);
     jwt.push('.');
-    jwt.push_str(&base64::encode_with_alphabet(
-        serde_json::to_string(claims)?.as_bytes(),
-        base64::Alphabet::UrlNoPadding,
-    ));
+    jwt.push_str(&claims_base64);
 
     let signature = key.sign(jwt.as_bytes())?;
-    let signature_base64 = base64::encode_with_alphabet(signature.as_ref(), base64::Alphabet::UrlNoPadding);
-
     jwt.push('.');
-    jwt.push_str(&signature_base64);
+    jwt.push_str(&base64::encode_with_alphabet(
+        signature.as_ref(),
+        base64::Alphabet::UrlNoPadding,
+    ));
 
     return Ok(jwt);
 }
@@ -208,6 +215,7 @@ pub fn parse_and_verify<C: DeserializeOwned>(
     token: &str,
     valdiate_options: &ValidateOptions,
 ) -> Result<ParsedJwt<C>, Error> {
+    let mut signature_buffer = [0u8; SIGNATURE_MAX_SIZE];
     let mut parts = token.split('.');
 
     let header_base64 = parts.next().ok_or(Error::InvalidToken)?;
@@ -217,22 +225,21 @@ pub fn parse_and_verify<C: DeserializeOwned>(
         return Err(Error::InvalidToken);
     }
 
-    let mut raw_signature = [0u8; ED25519_SIGNATURE_SIZE];
+    let signature_size = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode_slice(signature_base64.as_bytes(), &mut signature_buffer)
+        .map_err(|_| Error::InvalidSignature)?;
+    let raw_signature = &signature_buffer[..signature_size];
 
-    base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode_slice(signature_base64.as_bytes(), &mut raw_signature)
-        .map_err(|_| Error::InvalidToken)?;
+    let signed_message = &token[..header_base64.len() + 1 + claims_base64.len()].as_bytes();
+    key.verify(signed_message, &raw_signature)?;
 
-    let signed_message = &token[..header_base64.len() + 1 + claims_base64.len()];
-    key.verify(signed_message.as_bytes(), &raw_signature)?;
-
-    // TODO: validate header.
-    // as of now, it's already validate by parsing, but if we start to accept more signing algorithms
-    // we will need to defend against algorithm confusion attacks
     let header_json = base64::engine::general_purpose::URL_SAFE_NO_PAD
         .decode(header_base64.as_bytes())
         .map_err(|_| Error::InvalidToken)?;
     let header: Header = serde_json::from_slice(&header_json).map_err(|_| Error::InvalidToken)?;
+    if header.alg != key.algorithm {
+        return Err(Error::InvalidToken);
+    }
 
     let claims_json = base64::engine::general_purpose::URL_SAFE_NO_PAD
         .decode(claims_base64.as_bytes())
@@ -316,42 +323,5 @@ pub fn parse_and_verify<C: DeserializeOwned>(
         serde_json::from_slice(&claims_json).map_err(|_| Error::InvalidToken)?
     };
 
-    return Ok(ParsedJwt {
-        header,
-        claims,
-        signature: raw_signature,
-    });
+    return Ok(ParsedJwt { header, claims });
 }
-
-impl FromStr for TokenType {
-    type Err = Error;
-
-    fn from_str(algo: &str) -> Result<Self, Self::Err> {
-        match algo {
-            "JWT" => Ok(TokenType::Jwt),
-            _ => Err(Error::InvalidTokenType(algo.to_string())),
-        }
-    }
-}
-
-// impl FromStr for Algorithm {
-//     type Err = Error;
-
-//     fn from_str(algo: &str) -> Result<Self, Self::Err> {
-//         match algo {
-//             // "HS512" => Ok(Algorithm::HS512),
-//             "PS256" => Ok(Algorithm::PS256),
-//             "EdDSA" => Ok(Algorithm::EdDSA),
-//             _ => Err(Error::InvalidAlgorithm(algo.to_string())),
-//         }
-//     }
-// }
-
-// impl fmt::Display for Algorithm {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         let value = match self {
-//             Algorithm::EdDSA => "EdDSA",
-//         };
-//         write!(f, "{value}")
-//     }
-// }

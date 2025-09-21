@@ -1,7 +1,7 @@
 use aws_lc_rs::{encoding::AsBigEndian, signature::KeyPair};
 use serde::{Deserialize, Serialize};
 
-use crate::{Algorithm, Key, base64_utils::Base64UrlNoPaddingBytes};
+use crate::{Algorithm, Key, KeyCrypto, base64_utils::base64_url_no_padding};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Jwks {
@@ -11,6 +11,7 @@ pub struct Jwks {
 /// a JSON Web Key
 /// https://www.rfc-editor.org/rfc/rfc7517
 /// https://www.rfc-editor.org/rfc/rfc8037
+/// Note: Jwk are not validated during deserialization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Jwk {
     pub kid: String,
@@ -28,17 +29,25 @@ pub enum JwkCrypto {
     Okp {
         #[serde(rename = "crv")]
         curve: OkpCurve,
-        /// base64UrlNoPadding encoded public key
-        // #[serde(with = "base64_url_no_padding")]
-        x: Base64UrlNoPaddingBytes,
-        d: Option<Base64UrlNoPaddingBytes>,
+        #[serde(with = "base64_url_no_padding")]
+        x: Vec<u8>,
+        #[serde(with = "base64_url_no_padding::option")]
+        d: Option<Vec<u8>>,
     },
     Ec {
         #[serde(rename = "crv")]
         curve: EcCurve,
-        x: Base64UrlNoPaddingBytes,
-        y: Base64UrlNoPaddingBytes,
-        d: Option<Base64UrlNoPaddingBytes>,
+        #[serde(with = "base64_url_no_padding")]
+        x: Vec<u8>,
+        #[serde(with = "base64_url_no_padding")]
+        y: Vec<u8>,
+        #[serde(with = "base64_url_no_padding::option")]
+        d: Option<Vec<u8>>,
+    },
+    #[serde(rename = "oct")]
+    Oct {
+        #[serde(with = "base64_url_no_padding")]
+        key: Vec<u8>,
     },
 }
 
@@ -72,7 +81,7 @@ pub enum EcCurve {
 impl From<&Key> for Jwk {
     fn from(key: &Key) -> Self {
         match &key.crypto {
-            crate::KeyCrypto::Eddsa { curve, keypair } => {
+            KeyCrypto::Eddsa { curve, keypair } => {
                 let public_key = keypair.public_key().as_ref().to_vec();
                 let private_key = keypair
                     .seed()
@@ -84,42 +93,55 @@ impl From<&Key> for Jwk {
                 Jwk {
                     kid: key.id.clone(),
                     r#use: KeyUse::Sign,
-                    algorithm: Algorithm::EdDSA,
+                    algorithm: key.algorithm,
                     crypto: JwkCrypto::Okp {
                         curve: *curve,
-                        x: Base64UrlNoPaddingBytes(public_key),
-                        d: Some(Base64UrlNoPaddingBytes(private_key)),
+                        x: public_key,
+                        d: Some(private_key),
                     },
                 }
             }
-            crate::KeyCrypto::Ecdsa { curve, keypair } => {
-                let public_key = keypair.public_key().as_ref();
+            KeyCrypto::Ecdsa { curve, keypair } => {
+                let mut public_key = keypair.public_key().as_ref();
+                // skip the 0x04 byte if present
+                if (*curve == EcCurve::P256 && public_key.len() == 65)
+                    || (*curve == EcCurve::P521 && public_key.len() == 133)
+                {
+                    public_key = &public_key[1..];
+                }
+
                 let private_key = keypair
                     .private_key()
                     .as_be_bytes()
-                    .expect("error converting EcDsa seed to bytes")
+                    .expect("error converting ECDSA private key to bytes")
                     .as_ref()
                     .to_vec();
-                let algorithm = match curve {
-                    EcCurve::P256 => Algorithm::ES256,
-                    EcCurve::P521 => Algorithm::ES512,
-                };
-                let (x, y) = match curve {
+
+                let (x, y) = match *curve {
                     EcCurve::P256 => (public_key[..32].to_vec(), public_key[32..].to_vec()),
                     EcCurve::P521 => (public_key[..66].to_vec(), public_key[66..].to_vec()),
                 };
                 Jwk {
                     kid: key.id.clone(),
                     r#use: KeyUse::Sign,
-                    algorithm,
+                    algorithm: key.algorithm,
                     crypto: JwkCrypto::Ec {
                         curve: *curve,
-                        x: Base64UrlNoPaddingBytes(x),
-                        y: Base64UrlNoPaddingBytes(y),
-                        d: Some(Base64UrlNoPaddingBytes(private_key)),
+                        x: x,
+                        y: y,
+                        d: Some(private_key),
                     },
                 }
             }
+            KeyCrypto::Hmac {
+                algorithm: _,
+                key: hmac_key,
+            } => Jwk {
+                kid: key.id.clone(),
+                r#use: KeyUse::Sign,
+                algorithm: key.algorithm,
+                crypto: JwkCrypto::Oct { key: hmac_key.clone() },
+            },
         }
     }
 }

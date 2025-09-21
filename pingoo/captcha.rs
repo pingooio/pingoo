@@ -109,7 +109,7 @@ impl CaptchaManager {
         } else {
             // if the JWKS file doesn't exist, we create it
             let key_id = Uuid::new_v7().to_string();
-            let signing_key = Arc::new(jwt::Key::new_ed25519(key_id).map_err(|err| {
+            let signing_key = Arc::new(jwt::Key::generate_ed25519(key_id).map_err(|err| {
                 Error::Unspecified(format!("captcha: error generating captcha JWT signing key: {err}"))
             })?);
             save_jwt_keys(&[&signing_key], config::CAPTCHA_JWKS_PATH).await?;
@@ -443,7 +443,7 @@ pub fn generate_captcha_cookie(
         },
     };
     let header = jwt::Header {
-        typ: jwt::TokenType::Jwt,
+        typ: jwt::TokenType::JWT,
         alg: jwt::Algorithm::EdDSA,
         cty: None,
         jku: None,
@@ -488,7 +488,7 @@ pub fn generate_captcha_verified_cookies(
         },
     };
     let header = jwt::Header {
-        typ: jwt::TokenType::Jwt,
+        typ: jwt::TokenType::JWT,
         alg: jwt::Algorithm::EdDSA,
         cty: None,
         jku: None,
@@ -557,6 +557,11 @@ fn validate_jwk(jwk: &jwt::Jwk) -> Result<(), Error> {
                     "captcha: Private key is missing for key {}",
                     jwk.kid
                 )));
+            }
+        }
+        jwt::JwkCrypto::Oct { key } => {
+            if key.len() < 32 {
+                return Err(Error::Unspecified(format!("captcha: key is too short for key {}", jwk.kid)));
             }
         }
     }
