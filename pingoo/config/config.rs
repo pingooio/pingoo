@@ -27,8 +27,8 @@ pub const DEFAULT_TLS_FOLDER: &str = "/etc/pingoo/certificates";
 pub const GEOIP_DATABASE_PATHS: &[&str] = &[
     "/etc/pingoo/geoip.mmdb",
     "/etc/pingoo/geoip.mmdb.zst",
-    "/etc/pingoo_data/geoip.mmdb.zst",
-    "/etc/pingoo_data/geoip.mmdb.zst",
+    "/usr/share/pingoo/geoip.mmdb",
+    "/usr/share/pingoo/geoip.mmdb.zst",
 ];
 pub const CAPTCHA_JWKS_PATH: &str = "/etc/pingoo/captcha_jwks.json";
 pub const USER_AGENT: &str = concat!("pingoo/", env!("CARGO_PKG_VERSION"), " (https://pingoo.io)");

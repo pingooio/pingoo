@@ -69,14 +69,17 @@ RUN adduser \
     --uid "${UID}" \
     "${USER}"
 
+# Use the /etc/pingoo folder for configuration
 RUN mkdir -p /etc/pingoo
 RUN mkdir -p /etc/pingoo/rules
 COPY ./assets/pingoo.yml /etc/pingoo/pingoo.yml
 RUN chown -R $USER:$USER /etc/pingoo
 
-WORKDIR /etc/pingoo_data
+# Use the /usr/share/pingoo folder for static data.
+# reference: https://en.wikipedia.org/wiki/Filesystem_Hierarchy_Standard
+WORKDIR /usr/share/pingoo
 RUN wget https://downloads.pingoo.io/geoip.mmdb.zst
-RUN chown -R $USER:$USER /etc/pingoo_data
+RUN chown -R $USER:$USER /usr/share/pingoo
 
 
 ####################################################################################################
@@ -99,7 +102,7 @@ COPY --from=builder_files /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder_files /usr/share/zoneinfo /usr/share/zoneinfo
 
 COPY --from=builder_files --chown=pingoo:pingoo /etc/pingoo /etc/pingoo
-COPY --from=builder_files --chown=pingoo:pingoo /etc/pingoo_data /etc/pingoo_data
+COPY --from=builder_files --chown=pingoo:pingoo /usr/share/pingoo /usr/share/pingoo
 COPY ./assets/www /var/www
 
 # Copy our build

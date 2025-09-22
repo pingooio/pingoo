@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim as node
+FROM node:24-bookworm-slim AS node
 
 FROM ubuntu:24.04
 
