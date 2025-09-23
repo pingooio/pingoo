@@ -1,5 +1,7 @@
 # Pingoo Changelog
 
+## v0.12.0 - Work in progress
+
 ## v0.11.0 - 2025-09-22
 
 - **Breaking change**: the default geoip database is now located at `/usr/share/pingoo/geoip.mmdb(.zst)` in the Docker image instead of `/etc/pingoo_data/geoip.mmdb(.zst)` to follow the Filesystem Hierarchy Standard.

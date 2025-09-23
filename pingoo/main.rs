@@ -44,7 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .install_default()
         .map_err(|err| Error::Config(format!("error setting up rustls crypto provider: {err:?}")))?;
 
-    let config = config::load_and_validate()?;
+    let config = config::load_and_validate().await?;
 
     let (shutdown_tx, shutdown_rx) = watch::channel(());
     tokio::spawn(shutdown_signal(shutdown_tx));

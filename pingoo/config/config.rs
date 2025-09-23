@@ -1,7 +1,6 @@
 use core::fmt;
 use std::{
     collections::{HashMap, HashSet},
-    fs,
     net::SocketAddr,
     path::PathBuf,
     str::FromStr,
@@ -10,6 +9,7 @@ use std::{
 use http::StatusCode;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use tokio::fs;
 use tracing::info;
 
 use crate::{
@@ -166,12 +166,13 @@ impl fmt::Display for ListenerProtocol {
     }
 }
 
-pub fn load_and_validate() -> Result<Config, Error> {
+pub async fn load_and_validate() -> Result<Config, Error> {
     // first read and deserialize the configuration file into a `ConfigFile` struct
     // then convert it into a `Config` struct
     // finally, validate the configuration
 
     let raw_config = fs::read(DEFAULT_CONFIG_FILE)
+        .await
         .map_err(|err| Error::Config(format!("error reading config file ({DEFAULT_CONFIG_FILE}): {err}")))?;
 
     info!("configuration successfully loaded from {DEFAULT_CONFIG_FILE}");
@@ -179,7 +180,7 @@ pub fn load_and_validate() -> Result<Config, Error> {
     let mut config_file: ConfigFile = serde_yaml::from_slice(&raw_config)
         .map_err(|err| Error::Config(format!("error parsing config file ({DEFAULT_CONFIG_FILE}): {err}")))?;
 
-    let rules_from_folder = load_rules()?;
+    let rules_from_folder = load_rules().await?;
     if let Some(duplicate_rule_name) = find_duplicate2(
         rules_from_folder.iter().map(|(rule_name, _)| rule_name),
         config_file.rules.iter().map(|(rule_name, _)| rule_name),
@@ -321,12 +322,12 @@ fn validate_listeners_config(
     return Ok(());
 }
 
-fn load_rules() -> Result<IndexMap<String, RuleConfigFile>, Error> {
+async fn load_rules() -> Result<IndexMap<String, RuleConfigFile>, Error> {
     let mut ret = IndexMap::new();
 
     let rules_folder_path = PathBuf::from(DEFAULT_CONFIG_FOLDER).join("rules");
 
-    let rule_dir = match fs::read_dir(&rules_folder_path) {
+    let mut rule_dir = match fs::read_dir(&rules_folder_path).await {
         Ok(rule_dir) => rule_dir,
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(ret),
         Err(err) => {
@@ -336,15 +337,19 @@ fn load_rules() -> Result<IndexMap<String, RuleConfigFile>, Error> {
         }
     };
 
-    for file in rule_dir.into_iter().filter_map(|entry| entry.ok()).filter(|entry| {
-        entry
+    while let Ok(Some(file)) = rule_dir.next_entry().await {
+        if file
             .path()
             .extension()
             .map(|ext| ext.to_str().unwrap_or_default())
             .unwrap_or_default()
-            == "yml"
-    }) {
+            != "yml"
+        {
+            continue;
+        }
+
         let rule_file_content = fs::read(file.path())
+            .await
             .map_err(|err| Error::Config(format!("error reading rules file {:?}: {err}", file.path())))?;
 
         let rules: IndexMap<String, RuleConfigFile> = serde_yaml::from_slice(&rule_file_content)
