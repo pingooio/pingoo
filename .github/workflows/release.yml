@@ -16,6 +16,7 @@ permissions:
 
 env:
   DOCKER_IMAGE: ghcr.io/pingooio/pingoo
+  DOCKER_HUB_IMAGE: pingooio/pingoo
 
 jobs:
   docker_build:
@@ -43,20 +44,25 @@ jobs:
         run: |
           make docker_build
           docker image tag ${{ env.DOCKER_IMAGE }}:latest ${{ env.DOCKER_IMAGE }}:latest-${{ matrix.arch }}
+          docker image tag ${{ env.DOCKER_IMAGE }}:latest ${{ env.DOCKER_HUB_IMAGE }}:latest-${{ matrix.arch }}
           docker image tag ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION} ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION}-${{ matrix.arch }}
+          docker image tag ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION} ${{ env.DOCKER_HUB_IMAGE }}:${PINGOO_VERSION}-${{ matrix.arch }}
 
       - name: Docker images info
         run: |
           docker images
 
-      - name: Login to container registry
+      - name: Login to container registries
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
 
       - name: Docker push image
         run: |
           docker push ${{ env.DOCKER_IMAGE }}:latest-${{ matrix.arch }}
+          docker push ${{ env.DOCKER_HUB_IMAGE }}:latest-${{ matrix.arch }}
           docker push ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION}-${{ matrix.arch }}
+          docker push ${{ env.DOCKER_HUB_IMAGE }}:${PINGOO_VERSION}-${{ matrix.arch }}
 
 
   docker_push_manifest:
@@ -69,9 +75,10 @@ jobs:
       - name: Read version from Cargo.toml and export to env
         run: echo "PINGOO_VERSION=$(cat pingoo/Cargo.toml | grep '^version =' | cut -d'"' -f2)" >> "$GITHUB_ENV"
 
-      - name: Login to container registry
+      - name: Login to container registries
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
 
       - name: Push Docker manifest
         run: |
@@ -85,3 +92,13 @@ jobs:
             --amend ${{ env.DOCKER_IMAGE }}:latest-arm64
           docker manifest push ${{ env.DOCKER_IMAGE }}:latest
 
+
+          docker manifest create ${{ env.DOCKER_HUB_IMAGE }}:${PINGOO_VERSION} \
+            --amend ${{ env.DOCKER_HUB_IMAGE }}:${PINGOO_VERSION}-amd64 \
+            --amend ${{ env.DOCKER_HUB_IMAGE }}:${PINGOO_VERSION}-arm64
+          docker manifest push ${{ env.DOCKER_HUB_IMAGE }}:${PINGOO_VERSION}
+
+          docker manifest create ${{ env.DOCKER_HUB_IMAGE }}:latest \
+            --amend ${{ env.DOCKER_HUB_IMAGE }}:latest-amd64 \
+            --amend ${{ env.DOCKER_HUB_IMAGE }}:latest-arm64
+          docker manifest push ${{ env.DOCKER_HUB_IMAGE }}:latest
