@@ -40,12 +40,12 @@ pub enum Error {
 pub struct CountryCode([u8; 2]);
 
 impl GeoipDB {
-    /// try to load the geoip database from the default paths. Returns Ok(None) if database was not found.
-    pub async fn new() -> Result<Option<Self>, Error> {
-        let (geoip_db_path, mut mmdb_content) = match read_geoip_db().await? {
-            Some(path_and_content) => path_and_content,
-            None => return Ok(None),
-        };
+    /// try to load the geoip database from the default paths.
+    pub async fn new() -> Result<Self, Error> {
+        let (geoip_db_path, mut mmdb_content) = read_geoip_db()
+            .await?
+            .ok_or(Error::Unspecified("geoip database not found".to_string()))?;
+
         // if the geoip database has the .zst extension, then we consider it to be ZSTD-compressed
         if geoip_db_path.ends_with(".zst") {
             mmdb_content = zstd::decode_all(mmdb_content.as_slice()).map_err(|err| {
@@ -63,13 +63,17 @@ impl GeoipDB {
 
         debug!("geoip database successfully loaded from {geoip_db_path}");
 
-        return Ok(Some(GeoipDB {
+        return Ok(GeoipDB {
             mmdb: mmdb_reader,
             cache,
-        }));
+        });
     }
 
     pub async fn lookup(&self, ip: IpAddr) -> Result<GeoipRecord, Error> {
+        if ip.is_loopback() || ip.is_multicast() {
+            return Err(Error::AddressNotFound(ip));
+        }
+
         if let Some(record) = self.cache.get(&ip).await {
             return Ok(record);
         }
@@ -77,7 +81,7 @@ impl GeoipDB {
         return match self.mmdb.lookup::<GeoipRecord>(ip) {
             Ok(record) => {
                 // if geoip data is found, cache it for this IP
-                self.cache.insert(ip, record.clone()).await;
+                self.cache.insert(ip, record).await;
                 Ok(record)
             }
             Err(MaxMindDBError::AddressNotFoundError(_)) => Err(Error::AddressNotFound(ip)),

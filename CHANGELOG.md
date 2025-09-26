@@ -1,6 +1,9 @@
 # Pingoo Changelog
 
-## v0.12.0 - Work in progress
+## v0.12.0 - 2025-09-26
+
+* **minor breaking change**: Pingoo now errors if GeoIP database is not found.
+
 
 ## v0.11.0 - 2025-09-22
 
