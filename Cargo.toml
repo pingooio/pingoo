@@ -106,9 +106,9 @@ serde_urlencoded = { git = "https://github.com/bloom42/stdx-rs", branch = "main"
 uuid = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
 
 
-thiserror = { git = "https://github.com/dtolnay/thiserror", rev = "819fe29dbb6e41bb937e3fef0469917d7c476c60" }
-async-trait  = { git = "https://github.com/dtolnay/async-trait", rev = "cb2feb3519e189d589f93e983b6014b81997183b" }
-serde = { git = "https://github.com/serde-rs/serde", rev = "1d7899d671c6f6155b63a39fa6001c9c48260821" }
-serde_core  = { git = "https://github.com/serde-rs/serde", rev = "1d7899d671c6f6155b63a39fa6001c9c48260821" }
-serde_derive  = { git = "https://github.com/serde-rs/serde", rev = "1d7899d671c6f6155b63a39fa6001c9c48260821" }
-serde_json  = { git = "https://github.com/serde-rs/json", rev = "d12e943590208da738c092db92c34b39796a2538" }
+thiserror = { git = "https://github.com/dtolnay/thiserror", rev = "d2c492b5498a0134abcc1677101bec876fe0621a" }
+async-trait  = { git = "https://github.com/dtolnay/async-trait", rev = "fbd86047d853c78d0c646fb947e39b73d53ead0d" }
+serde = { git = "https://github.com/serde-rs/serde", rev = "a866b336f14aa57a07f0d0be9f8762746e64ecb4" }
+serde_core  = { git = "https://github.com/serde-rs/serde", rev = "a866b336f14aa57a07f0d0be9f8762746e64ecb4" }
+serde_derive  = { git = "https://github.com/serde-rs/serde", rev = "a866b336f14aa57a07f0d0be9f8762746e64ecb4" }
+serde_json  = { git = "https://github.com/serde-rs/json", rev = "b9cafe2626e20703cb24620af6bbad6dbd3b807f" }
