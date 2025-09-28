@@ -213,7 +213,8 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
                 country: request_context.country,
             };
 
-            req.extensions_mut().insert(RequestExtensionContext(request_context));
+            req.extensions_mut()
+                .insert(RequestExtensionContext(Arc::new(request_context)));
 
             // true if the captcha verified cookie is present and valid
             let mut captcha_verified = false;

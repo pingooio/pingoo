@@ -130,13 +130,12 @@ impl HttpService for HttpProxyService {
                 .insert(HeaderName::from_static("x-forwarded-host"), host_header);
         }
 
-        // TODO: make sure that this clone is memcpy-only
         let request_context = req
             .extensions()
             .get::<RequestExtensionContext>()
             .expect("error getting RequestContext extension")
-            .clone()
-            .0;
+            .0
+            .clone();
         let client_ip = request_context.client_address.ip();
         let client_ip_str = Arc::new(client_ip.to_string());
 

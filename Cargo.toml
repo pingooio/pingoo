@@ -22,6 +22,8 @@ members = [
     "captcha",
     "docker",
     "jwt",
+
+    "pong",
 ]
 
 

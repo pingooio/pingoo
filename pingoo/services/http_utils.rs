@@ -18,7 +18,7 @@ pub const CACHE_CONTROL_NO_CACHE: HeaderValue =
 pub const CACHE_CONTROL_DYNAMIC: HeaderValue = HeaderValue::from_static("public, no-cache, must-revalidate");
 
 #[derive(Clone)]
-pub struct RequestExtensionContext(pub RequestContext);
+pub struct RequestExtensionContext(pub Arc<RequestContext>);
 
 // #[derive(Clone)]
 // pub struct ReqExtensionCookies(pub Arc<Vec<Cookie<'static>>>);

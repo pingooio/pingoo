@@ -1,0 +1,15 @@
+[package]
+name = "pong"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "pong"
+path = "pong.rs"
+
+[dependencies]
+bytes = { workspace = true }
+http-body-util = { workspace = true }
+hyper = { workspace = true, features = ["full"] }
+hyper-util = { workspace = true, features = ["full"] }
+tokio = { workspace = true, features = ["full"] }
