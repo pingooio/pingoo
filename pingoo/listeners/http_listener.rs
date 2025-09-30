@@ -17,11 +17,13 @@ use crate::{
     config::ListenerConfig,
     geoip::{self, GeoipDB, GeoipRecord},
     listeners::{GRACEFUL_SHUTDOWN_TIMEOUT, Listener, SupportedHttpProtocols, accept_tcp_connection, bind_tcp_socket},
-    request_context::RequestContext,
     rules,
     services::{
         HttpService,
-        http_utils::{RequestExtensionContext, get_path, new_blocked_response, new_not_found_error},
+        http_utils::{
+            HOSTNAME_MAX_LENGTH, RequestContext, RequestExtensionContext, USER_AGENT_MAX_LENGTH, get_path,
+            new_blocked_response, new_not_found_error,
+        },
     },
 };
 
@@ -156,7 +158,7 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
                 None => GeoipRecord::default(),
             };
 
-            let user_agent = heapless::String::<256>::from_str(
+            let user_agent = heapless::String::<USER_AGENT_MAX_LENGTH>::from_str(
                 req.headers()
                     .get("user-agent")
                     .map(|header| header.to_str().unwrap_or_default().trim())
@@ -193,7 +195,7 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
             req.extensions_mut()
                 .insert(RequestExtensionContext(request_context.clone()));
 
-            if user_agent.is_empty() && user_agent.len() > 256 {
+            if user_agent.is_empty() || user_agent.len() >= USER_AGENT_MAX_LENGTH {
                 return Ok(new_blocked_response());
             }
 
@@ -204,12 +206,11 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
             }
 
             // apply rules
-            // TODO: avoid allocations
             let request_data = rules::RequestData {
                 host: &request_context.host,
                 path: &path,
-                url: req.uri().to_string(),
-                method: req.method().as_str(),
+                url: req.uri(),
+                method: req.method(),
                 user_agent: &user_agent,
             };
             let client_data = rules::ClientData {
@@ -292,7 +293,7 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
     };
 }
 
-pub fn get_host(req: &Request<hyper::body::Incoming>) -> heapless::String<256> {
+pub fn get_host(req: &Request<hyper::body::Incoming>) -> heapless::String<HOSTNAME_MAX_LENGTH> {
     // uri.host is present for HTTP/2 requests
     if let Some(host) = req.uri().host() {
         return heapless::String::from_str(host.trim()).unwrap_or_default();

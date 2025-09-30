@@ -7,7 +7,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use tokio::fs;
 use tracing::debug;
 
-use crate::config;
+use crate::{config, serde_utils};
 
 pub struct GeoipDB {
     mmdb: maxminddb::Reader<Vec<u8>>,
@@ -16,7 +16,7 @@ pub struct GeoipDB {
 
 #[derive(Clone, Debug, Deserialize, Serialize, Copy)]
 pub struct GeoipRecord {
-    #[serde(deserialize_with = "deserialize_asn")]
+    #[serde(deserialize_with = "serde_utils::asn::deserialize")]
     pub asn: u32,
     /// 2-letters country code
     pub country: CountryCode,
@@ -105,11 +105,6 @@ async fn read_geoip_db() -> Result<Option<(String, Vec<u8>)>, Error> {
         }
     }
     return Ok(None);
-}
-
-pub fn deserialize_asn<'de, D: Deserializer<'de>>(deserializer: D) -> Result<u32, D::Error> {
-    let asn_str = String::deserialize(deserializer)?;
-    return Ok(asn_str.trim_start_matches("AS").parse::<u32>().unwrap_or(0));
 }
 
 impl Default for GeoipRecord {

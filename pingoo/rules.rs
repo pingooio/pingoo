@@ -1,9 +1,10 @@
 use std::net::IpAddr;
 
+use http::Uri;
 use serde::Serialize;
 use tracing::warn;
 
-use crate::geoip::CountryCode;
+use crate::{geoip::CountryCode, serde_utils};
 
 #[derive(Debug, Clone)]
 pub struct Rule {
@@ -15,9 +16,11 @@ pub struct Rule {
 #[derive(Debug, Serialize)]
 pub struct RequestData<'a> {
     pub host: &'a str,
-    pub url: String,
+    #[serde(serialize_with = "serde_utils::uri::serialize")]
+    pub url: &'a Uri,
     pub path: &'a str,
-    pub method: &'a str,
+    #[serde(serialize_with = "serde_utils::method::serialize")]
+    pub method: &'a http::Method,
     pub user_agent: &'a str,
 }
 

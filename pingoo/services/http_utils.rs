@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use bytes::Bytes;
 use http::{HeaderValue, Request, Response, StatusCode, header};
@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use crate::{
     config::ServiceConfig,
-    request_context::RequestContext,
+    geoip::CountryCode,
     service_discovery::service_registry::ServiceRegistry,
     services::{HttpService, http_proxy_service::HttpProxyService, http_static_site_service::StaticSiteService},
 };
@@ -16,6 +16,20 @@ use crate::{
 pub const CACHE_CONTROL_NO_CACHE: HeaderValue =
     HeaderValue::from_static("private, no-cache, no-store, must-revalidate");
 pub const CACHE_CONTROL_DYNAMIC: HeaderValue = HeaderValue::from_static("public, no-cache, must-revalidate");
+
+pub const USER_AGENT_MAX_LENGTH: usize = 256;
+pub const HOSTNAME_MAX_LENGTH: usize = 256;
+
+#[derive(Debug, Clone)]
+pub struct RequestContext {
+    pub client_address: SocketAddr,
+    pub server_address: SocketAddr,
+    pub asn: u32,
+    pub country: CountryCode,
+    pub geoip_enabled: bool,
+    pub tls: bool,
+    pub host: heapless::String<HOSTNAME_MAX_LENGTH>,
+}
 
 #[derive(Clone)]
 pub struct RequestExtensionContext(pub Arc<RequestContext>);
