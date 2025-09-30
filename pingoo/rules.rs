@@ -13,12 +13,12 @@ pub struct Rule {
 }
 
 #[derive(Debug, Serialize)]
-pub struct RequestData {
-    pub host: String,
+pub struct RequestData<'a> {
+    pub host: &'a str,
     pub url: String,
-    pub path: String,
-    pub method: String,
-    pub user_agent: String,
+    pub path: &'a str,
+    pub method: &'a str,
+    pub user_agent: &'a str,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -46,3 +46,10 @@ impl Rule {
         }
     }
 }
+
+// fn serialize_arc_string<S>(value: &Arc<String>, serializer: S) -> Result<S::Ok, S::Error>
+// where
+//     S: serde::Serializer,
+// {
+//     serializer.serialize_str(value)
+// }

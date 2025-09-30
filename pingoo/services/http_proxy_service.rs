@@ -104,6 +104,13 @@ impl HttpService for HttpProxyService {
             return new_bad_gateway_error();
         }
 
+        let request_context = req
+            .extensions()
+            .get::<RequestExtensionContext>()
+            .expect("error getting RequestContext extension")
+            .0
+            .clone();
+
         for header in HOP_HEADERS {
             req.headers_mut().remove(*header);
         }
@@ -123,35 +130,28 @@ impl HttpService for HttpProxyService {
 
         // here we forward the host from the client's request.
         // TODO: allow to configure if we forward the Host header or not (and thus use the host from the upstream).
-        let host = get_host(&req);
-        if let Ok(host_header) = HeaderValue::from_str(host) {
+        if let Ok(host_header) = HeaderValue::from_str(&request_context.host) {
             req.headers_mut().insert(header::HOST, host_header.clone()); // TODO: try to avoid clone
             req.headers_mut()
                 .insert(HeaderName::from_static("x-forwarded-host"), host_header);
         }
 
-        let request_context = req
-            .extensions()
-            .get::<RequestExtensionContext>()
-            .expect("error getting RequestContext extension")
-            .0
-            .clone();
         let client_ip = request_context.client_address.ip();
         let client_ip_str = Arc::new(client_ip.to_string());
 
         // TODO: allow users to configure if they trust the x-forwarded-for header or no
-        let forwarded_for_inbound = req
+        let forwarded_for_from_client = req
             .headers()
             .get_all("x-forwarded-for")
             .iter()
             .map(|header_value| header_value.to_str().unwrap_or_default())
             .collect::<Vec<_>>();
-        let forwarded_for_outbound = if forwarded_for_inbound.is_empty() {
+        let forwarded_for_to_upstream = if forwarded_for_from_client.is_empty() {
             client_ip_str.clone()
         } else {
-            Arc::new(forwarded_for_inbound.join(", ") + format!(", {client_ip}").as_str())
+            Arc::new(forwarded_for_from_client.join(", ") + format!(", {client_ip}").as_str())
         };
-        if let Ok(forwarded_for) = HeaderValue::from_str(&forwarded_for_outbound) {
+        if let Ok(forwarded_for) = HeaderValue::from_str(&forwarded_for_to_upstream) {
             req.headers_mut().insert("x-forwarded-for", forwarded_for);
         }
 
@@ -202,18 +202,4 @@ impl HttpService for HttpProxyService {
         // Ok(Response::from_parts(parts, boxed_body))
         return Response::from_parts(parts, boxed_body);
     }
-}
-
-pub fn get_host(req: &Request<hyper::body::Incoming>) -> &str {
-    // uri.host is present for HTTP/2 requests
-    if let Some(host) = req.uri().host() {
-        return host.trim();
-    }
-
-    // otherwise, in HTTP/1.x it should be present in the Host header
-    if let Some(host) = req.headers().get(http::header::HOST) {
-        return host.to_str().unwrap_or_default().trim();
-    }
-
-    return "";
 }

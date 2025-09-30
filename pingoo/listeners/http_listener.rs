@@ -1,7 +1,8 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, str::FromStr, sync::Arc};
 
 use ::rules::Action;
 use cookie::Cookie;
+use http::Request;
 use hyper::service::service_fn;
 use hyper_util::{
     rt::{TokioExecutor, TokioIo},
@@ -20,7 +21,6 @@ use crate::{
     rules,
     services::{
         HttpService,
-        http_proxy_service::get_host,
         http_utils::{RequestExtensionContext, get_path, new_blocked_response, new_not_found_error},
     },
 };
@@ -137,8 +137,8 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
         let geoip = geoip.clone();
         let captcha_manager = captcha_manager.clone();
         async move {
-            let host: &str = get_host(&req);
-            let path = get_path(&req);
+            let host = get_host(&req);
+            let path = get_path(&req).to_string();
 
             let geoip_record = match geoip.as_ref() {
                 Some(geoip_db) => {
@@ -156,11 +156,13 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
                 None => GeoipRecord::default(),
             };
 
-            let user_agent = req
-                .headers()
-                .get("user-agent")
-                .map(|header| header.to_str().unwrap_or_default().trim())
-                .unwrap_or_default();
+            let user_agent = heapless::String::<256>::from_str(
+                req.headers()
+                    .get("user-agent")
+                    .map(|header| header.to_str().unwrap_or_default().trim())
+                    .unwrap_or_default(),
+            )
+            .unwrap_or_default();
 
             let client_id = generate_captcha_client_id(client_socket_addr.ip(), &user_agent, &host);
 
@@ -178,6 +180,19 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
                 Vec::new()
             };
 
+            let request_context = Arc::new(RequestContext {
+                client_address: client_socket_addr,
+                server_address: listener_address,
+                asn: geoip_record.asn,
+                country: geoip_record.country,
+                geoip_enabled: geoip.is_some(),
+                tls: use_tls,
+                host: host,
+            });
+
+            req.extensions_mut()
+                .insert(RequestExtensionContext(request_context.clone()));
+
             if user_agent.is_empty() && user_agent.len() > 256 {
                 return Ok(new_blocked_response());
             }
@@ -188,23 +203,14 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
                     .await);
             }
 
-            let request_context = RequestContext {
-                client_address: client_socket_addr,
-                server_address: listener_address,
-                asn: geoip_record.asn,
-                country: geoip_record.country,
-                geoip_enabled: geoip.is_some(),
-                tls: use_tls,
-            };
-
             // apply rules
             // TODO: avoid allocations
             let request_data = rules::RequestData {
-                host: host.to_string(),
-                path: path.to_string(),
+                host: &request_context.host,
+                path: &path,
                 url: req.uri().to_string(),
-                method: req.method().to_string(),
-                user_agent: user_agent.to_string(),
+                method: req.method().as_str(),
+                user_agent: &user_agent,
             };
             let client_data = rules::ClientData {
                 ip: request_context.client_address.ip(),
@@ -212,9 +218,6 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
                 asn: request_context.asn as i64,
                 country: request_context.country,
             };
-
-            req.extensions_mut()
-                .insert(RequestExtensionContext(Arc::new(request_context)));
 
             // true if the captcha verified cookie is present and valid
             let mut captcha_verified = false;
@@ -243,7 +246,7 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
             if let Err(err) = rules_ctx.add_variable("client", &client_data) {
                 debug!("rules: error adding client variable: {err}")
             }
-            // TODO: is it really performant? Make sure than no extra clone for the list happen. Only Arc clones
+            // TODO: is it really fast? Make sure than no extra clone for the list happen. Only Arc clones
             rules_ctx.add_variable_from_value("lists", &*lists);
 
             for rule in rules.as_ref() {
@@ -287,4 +290,18 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
     {
         error!(listener = listener_name.as_ref(), "error serving HTTP connection: {err:?}");
     };
+}
+
+pub fn get_host(req: &Request<hyper::body::Incoming>) -> heapless::String<256> {
+    // uri.host is present for HTTP/2 requests
+    if let Some(host) = req.uri().host() {
+        return heapless::String::from_str(host.trim()).unwrap_or_default();
+    }
+
+    // otherwise, in HTTP/1.x it should be present in the Host header
+    if let Some(host) = req.headers().get(http::header::HOST) {
+        return heapless::String::from_str(host.to_str().unwrap_or_default().trim()).unwrap_or_default();
+    }
+
+    return heapless::String::new();
 }

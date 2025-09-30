@@ -10,4 +10,5 @@ pub struct RequestContext {
     pub country: CountryCode,
     pub geoip_enabled: bool,
     pub tls: bool,
+    pub host: heapless::String<256>,
 }
