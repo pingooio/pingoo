@@ -28,16 +28,16 @@ members = [
 
 
 [workspace.dependencies]
-base64 = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-bel = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-embed = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-hex = { git = "https://github.com/bloom42/stdx-rs", branch = "main", features = ["serde"] }
-ipnetwork = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-maxminddb = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-mime_guess = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-serde_urlencoded = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-serde_yaml = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-uuid = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+base64 = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+bel = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+embed = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+hex = { git = "https://github.com/pingooio/stdx-rs", branch = "main", features = ["serde"] }
+ipnetwork = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+maxminddb = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+mime_guess = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+serde_urlencoded = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+serde_yaml = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+uuid = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 
 
 arc-swap = "1"
@@ -79,10 +79,10 @@ zeroize = "1"
 zstd = "0.13"
 
 
-# countries = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+# countries = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 #
 #
-# tld = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+# tld = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 # jsonwebtoken = "9"
 # mime = "0.3"
 # regex = "1"
@@ -93,19 +93,19 @@ zstd = "0.13"
 
 
 [patch.crates-io]
-base64 = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-cfg-if = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-form_urlencoded = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-hex = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-httpdate = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-ipnetwork = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-itoa = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-mime_guess = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-percent-encoding = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-pin-project-lite = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-ryu = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-serde_urlencoded = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
-uuid = { git = "https://github.com/bloom42/stdx-rs", branch = "main" }
+base64 = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+cfg-if = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+form_urlencoded = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+hex = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+httpdate = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+ipnetwork = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+itoa = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+mime_guess = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+percent-encoding = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+pin-project-lite = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+ryu = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+serde_urlencoded = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+uuid = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 
 
 thiserror = { git = "https://github.com/dtolnay/thiserror", rev = "d2c492b5498a0134abcc1677101bec876fe0621a" }

@@ -49,30 +49,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (shutdown_tx, shutdown_rx) = watch::channel(());
     tokio::spawn(shutdown_signal(shutdown_tx));
 
-    match &config.child_process {
-        None => {}
-        Some(child_process_config) => {
-            debug!("starting child process: {:?}", &child_process_config.command);
-            let mut command = Command::new(&child_process_config.command[0]);
-            if child_process_config.command.len() > 1 {
-                command.args(&child_process_config.command[1..]);
-            }
-
-            // TODO: handle situation where the child exit early due to an error.
-            // Give the child a short window of time and check if it has exited.
-            command
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .spawn()
-                .map_err(|err| {
-                    Error::Unspecified(format!(
-                        "error starting child process ({:?}): {err}",
-                        &child_process_config.command
-                    ))
-                })?;
+    if let Some(child_process_config) = &config.child_process {
+        debug!("starting child process: {:?}", &child_process_config.command);
+        let mut command = Command::new(&child_process_config.command[0]);
+        if child_process_config.command.len() > 1 {
+            command.args(&child_process_config.command[1..]);
         }
-    };
+
+        // TODO: handle situation where the child exit early due to an error.
+        // Give the child a short window of time and check if it has exited.
+        command
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .map_err(|err| {
+                Error::Unspecified(format!(
+                    "error starting child process ({:?}): {err}",
+                    &child_process_config.command
+                ))
+            })?;
+    }
 
     Server::new(config).run(shutdown_rx).await?;
 

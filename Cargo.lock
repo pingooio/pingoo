@@ -158,9 +158,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-sys"
-version = "0.32.1"
+version = "0.32.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ba2e2516bdf37af57fc6ff047855f54abad0066e5c4fdaaeb76dabb2e05bcf5"
+checksum = "a2b715a6010afb9e457ca2b7c9d2b9c344baa8baed7b38dc476034c171b32575"
 dependencies = [
  "bindgen",
  "cc",
@@ -188,12 +188,12 @@ dependencies = [
 [[package]]
 name = "base64"
 version = "0.22.100"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 
 [[package]]
 name = "bel"
 version = "0.11.0"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 dependencies = [
  "antlr4rust",
  "chrono",
@@ -315,7 +315,7 @@ dependencies = [
 [[package]]
 name = "cfg-if"
 version = "1.0.0"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 
 [[package]]
 name = "chrono"
@@ -539,7 +539,7 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 [[package]]
 name = "embed"
 version = "8.4.0"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 dependencies = [
  "embed_impl",
  "embed_utils",
@@ -549,7 +549,7 @@ dependencies = [
 [[package]]
 name = "embed_impl"
 version = "8.4.0"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 dependencies = [
  "embed_utils",
  "proc-macro2",
@@ -561,7 +561,7 @@ dependencies = [
 [[package]]
 name = "embed_utils"
 version = "8.4.0"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 dependencies = [
  "blake3",
  "walkdir",
@@ -621,7 +621,7 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 [[package]]
 name = "form_urlencoded"
 version = "1.2.2"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 dependencies = [
  "percent-encoding",
 ]
@@ -822,7 +822,7 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 [[package]]
 name = "hex"
 version = "0.4.3"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 dependencies = [
  "serde",
 ]
@@ -925,7 +925,7 @@ checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
 [[package]]
 name = "httpdate"
 version = "1.0.3"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 
 [[package]]
 name = "hyper"
@@ -1169,7 +1169,7 @@ checksum = "469fb0b9cefa57e3ef31275ee7cacb78f2fdca44e4765491884a2b119d4eb130"
 [[package]]
 name = "ipnetwork"
 version = "0.21.1"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 dependencies = [
  "serde",
 ]
@@ -1186,7 +1186,7 @@ dependencies = [
 [[package]]
 name = "itoa"
 version = "1.0.11"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 
 [[package]]
 name = "jobserver"
@@ -1286,7 +1286,7 @@ dependencies = [
 [[package]]
 name = "maxminddb"
 version = "0.24.0"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 dependencies = [
  "ipnetwork",
  "memchr",
@@ -1318,7 +1318,7 @@ checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
 [[package]]
 name = "mime_guess"
 version = "2.0.4"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 dependencies = [
  "mime",
 ]
@@ -1504,12 +1504,12 @@ dependencies = [
 [[package]]
 name = "percent-encoding"
 version = "2.3.2"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 
 [[package]]
 name = "pin-project-lite"
 version = "0.2.14"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 
 [[package]]
 name = "pin-utils"
@@ -1640,9 +1640,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.40"
+version = "1.0.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1885c039570dc00dcb4ff087a89e185fd56bae234ddc7f056a945bf36467248d"
+checksum = "ce25767e7b499d1b604768e7cde645d14cc8584231ea6b295e9c9eb22c02e1d1"
 dependencies = [
  "proc-macro2",
 ]
@@ -1871,9 +1871,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.6"
+version = "0.103.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8572f3c2cb9934231157b45499fc41e1f58c589fdfb81a844ba873265e80f8eb"
+checksum = "e10b3f4191e8a80e6b43eebabfac91e5dcecebb27a71f04e820c47ec41d314bf"
 dependencies = [
  "aws-lc-rs",
  "ring",
@@ -1890,7 +1890,7 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 [[package]]
 name = "ryu"
 version = "1.0.18"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 
 [[package]]
 name = "same-file"
@@ -1918,9 +1918,9 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "security-framework"
-version = "3.5.0"
+version = "3.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc198e42d9b7510827939c9a15f5062a0c913f3371d765977e586d2fe6c16f4a"
+checksum = "b3297343eaf830f66ede390ea39da1d462b6b0c1b000f420d0a83f898bbbe6ef"
 dependencies = [
  "bitflags",
  "core-foundation 0.10.1",
@@ -1987,7 +1987,7 @@ dependencies = [
 [[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 dependencies = [
  "form_urlencoded",
  "itoa",
@@ -1998,7 +1998,7 @@ dependencies = [
 [[package]]
 name = "serde_yaml"
 version = "0.9.34+deprecated"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 dependencies = [
  "indexmap",
  "itoa",
@@ -2365,7 +2365,7 @@ checksum = "f63a545481291138910575129486daeaf8ac54aee4387fe7906919f7830c7d9d"
 [[package]]
 name = "unsafe_libyaml"
 version = "0.2.11"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 
 [[package]]
 name = "untrusted"
@@ -2400,7 +2400,7 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 [[package]]
 name = "uuid"
 version = "1.17.0"
-source = "git+https://github.com/bloom42/stdx-rs?branch=main#e891287637f027e589e314bd7831c951e99396b3"
+source = "git+https://github.com/pingooio/stdx-rs?branch=main#b71c400779c9c43ea63fe38cb7f09bccb6c1d747"
 dependencies = [
  "rand 0.8.5",
  "serde",
@@ -2994,9 +2994,9 @@ dependencies = [
 
 [[package]]
 name = "zeroize"
-version = "1.8.1"
+version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ced3678a2879b30306d323f4542626697a464a97c0a07c9aebf7ebca65cd4dde"
+checksum = "b97154e67e32c85465826e8bcc1c59429aaaf107c1e4a9e53c8d8ccd5eff88d0"
 dependencies = [
  "zeroize_derive",
 ]
