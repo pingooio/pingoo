@@ -271,10 +271,16 @@ pub async fn load_and_validate() -> Result<Config, Error> {
     if let Some(acme_config) = &tls_config.acme {
         debug!(directory_url = acme_config.directory_url, domains = ?acme_config.domains, "config: ACME");
 
-        if acme_config.domains.iter().any(|domain| domain.contains('*')) {
-            return Err(Error::Config(
-                "Pingoo currently doesn't support wildcard domains for automatic TLS (ACME)".to_string(),
-            ));
+        for domain in &acme_config.domains {
+            if domain.contains('*') {
+                return Err(Error::Config(format!(
+                    "acme: Pingoo currently doesn't support wildcard domains for automatic TLS ({domain})"
+                )));
+            }
+
+            if !domain.is_ascii() || domain.to_ascii_lowercase().as_str() != domain {
+                return Err(Error::Config(format!("acme: invalid domain: {domain}")));
+            }
         }
     }
 

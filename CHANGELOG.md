@@ -1,5 +1,11 @@
 # Pingoo Changelog
 
+## v0.13.0 - Work in progress
+
+* **Breaking change**: the `/etc/pingoo/certificates` folder has moved to `/etc/pingoo/tls`.
+* Add support for the ACME protocol for automatic TLS.
+
+
 ## v0.12.0 - 2025-09-26
 
 * **minor breaking change**: Pingoo now errors if GeoIP database is not found.
