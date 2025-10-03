@@ -1,7 +1,10 @@
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use chrono::Utc;
-use instant_acme::{AuthorizationStatus, ChallengeType, Identifier, NewOrder, OrderStatus, RetryPolicy};
+use dashmap::DashMap;
+use instant_acme::{
+    AuthorizationStatus, ChallengeType, Identifier, KeyAuthorization, NewOrder, OrderStatus, RetryPolicy,
+};
 use rcgen::{CustomExtension, KeyPair, PKCS_ECDSA_P256_SHA256};
 use rustls::{
     ServerConfig,
@@ -17,7 +20,8 @@ use tracing::{debug, error, info};
 use crate::{
     Error,
     config::DEFAULT_TLS_FOLDER,
-    tls::{TlsManager, certificate::parse_certificate_and_private_key},
+    services::tcp_proxy_service::retry,
+    tls::{TlsManager, certificate::parse_certificate_and_private_key, tls_manager::write_cert_file},
 };
 
 pub const ACME_TLS_ALPN_NAME: &[u8] = b"acme-tls/1";
@@ -29,22 +33,39 @@ pub struct AcmeConfig {
     pub account: instant_acme::AccountCredentials,
 }
 
+pub(super) struct AcmeChallenge {
+    // identifier: String,
+    // token: String,
+    key_authorization: KeyAuthorization,
+}
+
 impl TlsManager {
     pub fn start_acme_in_background(self: Arc<Self>) {
-        if self.acme_domains.is_empty() {
+        let acme_config = match &self.acme {
+            Some(acme) => acme.clone(),
+            None => return,
+        };
+
+        if acme_config.domains.is_empty() {
+            debug!("acme: domains are empty. Exiting ACME manager.");
             return;
         }
+
+        debug!("acme: starting ACME manager in background");
 
         tokio::spawn(async move {
             loop {
                 let in_30_days = Utc::now() + Duration::from_secs(30 * 24 * 3600);
-                let domains_to_order: Vec<String> = self
-                    .acme_domains
+                let domains_to_order: Vec<String> = acme_config
+                    .domains
                     .iter()
-                    .filter(|&domain| match self.certificates.get(domain) {
-                        Some(cert) if cert.metadata.not_after < in_30_days => true,
-                        None => true,
-                        _ => false,
+                    .filter(|&domain| {
+                        // keep domains that are not yet in the store, or that expire in less than 30 days
+                        match self.certificates.get(domain) {
+                            Some(cert) if cert.metadata.not_after < in_30_days => true,
+                            None => true,
+                            _ => false,
+                        }
                     })
                     .map(Clone::clone)
                     .collect();
@@ -52,27 +73,32 @@ impl TlsManager {
                 for domain in domains_to_order {
                     tokio::spawn({
                         let tls_manager = self.clone();
+                        let acme_config = acme_config.clone();
                         async move {
                             // time for listeners to start
                             tokio::time::sleep(Duration::from_secs(2)).await;
                             let tls_dir: PathBuf = DEFAULT_TLS_FOLDER.into();
+                            let domain = &domain;
 
                             debug!(domain, "acme: ordering certificate");
 
-                            let (private_key_pem, cert_chain_pem) = match tls_manager.order_certificate(&domain).await {
-                                Ok(cert) => cert,
-                                Err(err) => {
-                                    error!(domain, "TLS: error ordering TLS certificate: {err}");
-                                    return;
-                                }
-                            };
+                            let (private_key_pem, cert_chain_pem) =
+                                match order_certificate(&acme_config.account, &acme_config.challenges, &domain).await {
+                                    Ok(cert) => cert,
+                                    Err(err) => {
+                                        error!(domain, "TLS: error ordering TLS certificate: {err}");
+                                        return;
+                                    }
+                                };
+                            let private_key_pem = private_key_pem.as_bytes();
+                            let cert_chain_pem = cert_chain_pem.as_bytes();
 
                             debug!(domain, "acme: order successfully completed");
 
                             // parse certificate and add to cert store
                             let certificate = match parse_certificate_and_private_key(
-                                cert_chain_pem.as_bytes(),
-                                private_key_pem.as_bytes(),
+                                cert_chain_pem,
+                                private_key_pem,
                                 CryptoProvider::get_default().unwrap(),
                             ) {
                                 Ok(cert) => cert,
@@ -84,90 +110,50 @@ impl TlsManager {
                             tls_manager.certificates.insert(domain.clone(), Arc::new(certificate));
 
                             // save private key and certificate chain
-                            let mut private_key_path = tls_dir.clone();
-                            private_key_path.push(format!("{domain}.key"));
-                            if let Err(err) = fs::write(private_key_path, private_key_pem.as_bytes()).await {
-                                error!(domain, "TLS: error saving ACME TLS private key: {err}");
-                                return;
-                            };
+                            if let Err(err) = retry(
+                                || {
+                                    let tls_dir = tls_dir.clone();
+                                    async move {
+                                        let mut private_key_path = tls_dir.clone();
+                                        private_key_path.push(format!("{domain}.key"));
+                                        write_cert_file(private_key_path, private_key_pem).await?;
 
-                            let mut cert_chain_path = tls_dir;
-                            cert_chain_path.push(format!("{domain}.pem"));
-                            if let Err(err) = fs::write(cert_chain_path, cert_chain_pem.as_bytes()).await {
-                                error!(domain, "TLS: error saving ACME TLS certificate chain: {err}");
-                                return;
-                            };
+                                        let mut cert_chain_path = tls_dir;
+                                        cert_chain_path.push(format!("{domain}.pem"));
+                                        write_cert_file(cert_chain_path, cert_chain_pem).await?;
 
+                                        Ok(())
+                                    }
+                                },
+                                5,
+                                Duration::from_secs(1),
+                            )
+                            .await
+                            {
+                                error!(domain, "TLS: error saving ACME TLS certificate: {err}");
+                                return;
+                            }
                             info!(domain, "acme: TLS certificate successfully saved");
                         }
                     });
                 }
 
-                // sleep for 12 hours
-                tokio::time::sleep(Duration::from_secs(12 * 3600)).await;
+                // sleep for 6 hours
+                tokio::time::sleep(Duration::from_secs(6 * 3600)).await;
             }
         });
     }
 
-    pub async fn order_certificate(&self, domain: &str) -> Result<(String, String), Error> {
-        let mut order = self
-            .acme_account
-            .new_order(&NewOrder::new(&[Identifier::Dns(domain.to_string())]))
-            .await
-            .map_err(|err| Error::Unspecified(format!("error placing ACME order for {domain}: {err}")))?;
-
-        let mut authorizations = order.authorizations();
-
-        let mut authorization = authorizations
-            .next()
-            .await
-            .ok_or(Error::Unspecified(format!("ACME authorizations is empty for {domain}")))?
-            .map_err(|err| Error::Unspecified(format!("error getting ACME authorization for {domain}: {err}")))?;
-        if !matches!(authorization.status, AuthorizationStatus::Pending | AuthorizationStatus::Valid) {
-            return Err(Error::Unspecified(format!(
-                "unexpected ACME order status for {domain} (status: {:?})",
-                authorization.status
-            )));
-        }
-
-        let mut challenge = authorization
-            .challenge(ChallengeType::TlsAlpn01)
-            .ok_or(Error::Unspecified("tls-alpn-01 challenge not found".to_string()))?;
-
-        self.acme_authorizations
-            .insert(domain.to_string(), challenge.key_authorization());
-
-        challenge
-            .set_ready()
-            .await
-            .map_err(|err| Error::Unspecified(format!("error setting ACME challenge as ready for {domain}: {err}")))?;
-
-        debug!(domain, "acme: challenge ready. waiting for server verification");
-
-        let status = order
-            .poll_ready(&RetryPolicy::default())
-            .await
-            .map_err(|err| Error::Unspecified(format!("error polling ACME challenge for {domain}: {err}")))?;
-        if status != OrderStatus::Ready {
-            return Err(Error::Unspecified(format!(
-                "unexpected ACME order status for {domain} (status: {status:?})"
-            )));
-        }
-
-        let private_key_pem = order.finalize().await.map_err(|err| {
-            Error::Unspecified(format!("error getting private key for ACME order for {domain}: {err}"))
-        })?;
-        let cert_chain_pem = order.poll_certificate(&RetryPolicy::default()).await.map_err(|err| {
-            Error::Unspecified(format!("error getting certificate chain for ACME order for {domain}: {err}"))
-        })?;
-
-        self.acme_authorizations.remove(domain);
-
-        return Ok((private_key_pem, cert_chain_pem));
-    }
-
     pub async fn get_tls_alpn_01_server_config(&self, client_hello: &ClientHello<'_>) -> Arc<ServerConfig> {
-        match self.get_tls_alpn_01_cert(&client_hello).await {
+        let acme = match &self.acme {
+            Some(acme) => acme.clone(),
+            None => {
+                debug!("got tls-alpn-01 request but ACME config is empty");
+                return self.get_server_config(client_hello).await;
+            }
+        };
+
+        match get_tls_alpn_01_cert(&acme.challenges, &client_hello).await {
             Ok(certified_key) => {
                 let mut tls_config = ServerConfig::builder()
                     .with_no_client_auth()
@@ -181,36 +167,106 @@ impl TlsManager {
             }
         }
     }
+}
 
-    async fn get_tls_alpn_01_cert(&self, client_hello: &ClientHello<'_>) -> Result<CertifiedKey, Error> {
-        let domain = client_hello.server_name().unwrap_or_default();
-        debug!(domain = domain, "acme: got tls-alpn-01 request");
+/// generates a self-signed certificate to answer the tls-alpn-01 challenge as specified in
+/// [RFC 8737](https://datatracker.ietf.org/doc/html/rfc8737).
+async fn get_tls_alpn_01_cert(
+    challenges_store: &DashMap<String, AcmeChallenge>,
+    client_hello: &ClientHello<'_>,
+) -> Result<CertifiedKey, Error> {
+    let domain = client_hello.server_name().unwrap_or_default();
+    debug!(domain, "acme: got tls-alpn-01 request");
 
-        let key_auth = self
-            .acme_authorizations
-            .get(domain)
-            .ok_or(Error::Unspecified(format!("key authorization not found for {domain}")))?;
-        debug!(domain = domain, "acme: key authorization found");
+    let challenge = challenges_store
+        .get(domain)
+        .ok_or(Error::Unspecified(format!("ACME challenge not found for {domain}")))?;
+    debug!(domain, "acme: challenge found");
 
-        let mut cert_params = rcgen::CertificateParams::new(vec![domain.to_string()])
-            .map_err(|err| Error::Unspecified(format!("error creating certificate for {domain}: {err}")))?;
+    let mut cert_params = rcgen::CertificateParams::new(vec![domain.to_string()])
+        .map_err(|err| Error::Unspecified(format!("error creating certificate for {domain}: {err}")))?;
 
-        cert_params.custom_extensions = vec![CustomExtension::new_acme_identifier(key_auth.digest().as_ref())];
+    cert_params.custom_extensions = vec![CustomExtension::new_acme_identifier(
+        challenge.key_authorization.digest().as_ref(),
+    )];
 
-        let key_pair = KeyPair::generate_for(&PKCS_ECDSA_P256_SHA256)
-            .map_err(|err| Error::Unspecified(format!("error generating keypair for {domain}: {err}")))?;
-        let cert = cert_params.self_signed(&key_pair).map_err(|err| {
-            Error::Unspecified(format!("error generating self-signed certificate for {domain}: {err}"))
-        })?;
+    let key_pair = KeyPair::generate_for(&PKCS_ECDSA_P256_SHA256)
+        .map_err(|err| Error::Unspecified(format!("error generating keypair for {domain}: {err}")))?;
+    let cert = cert_params
+        .self_signed(&key_pair)
+        .map_err(|err| Error::Unspecified(format!("error generating self-signed certificate for {domain}: {err}")))?;
 
-        let signing_key = rustls::crypto::aws_lc_rs::sign::any_ecdsa_type(&PrivateKeyDer::Pkcs8(
-            PrivatePkcs8KeyDer::from(key_pair.serialize_der()),
-        ))
-        .map_err(|err| Error::Unspecified(format!("error creating SigningKey for {domain}: {err}")))?;
-        let certified_key = CertifiedKey::new(vec![cert.der().clone()], signing_key);
+    let signing_key = rustls::crypto::aws_lc_rs::sign::any_ecdsa_type(&PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(
+        key_pair.serialize_der(),
+    )))
+    .map_err(|err| Error::Unspecified(format!("error creating SigningKey for {domain}: {err}")))?;
+    let certified_key = CertifiedKey::new(vec![cert.der().clone()], signing_key);
 
-        return Ok(certified_key);
+    return Ok(certified_key);
+}
+
+/// Place an order for a TLS certificate to the given ACME directory.
+async fn order_certificate(
+    acme_account: &instant_acme::Account,
+    challenges_store: &DashMap<String, AcmeChallenge>,
+    domain: &str,
+) -> Result<(String, String), Error> {
+    let mut order = acme_account
+        .new_order(&NewOrder::new(&[Identifier::Dns(domain.to_string())]))
+        .await
+        .map_err(|err| Error::Unspecified(format!("error placing ACME order for {domain}: {err}")))?;
+
+    let mut authorizations = order.authorizations();
+
+    let mut authorization = authorizations
+        .next()
+        .await
+        .ok_or(Error::Unspecified(format!("ACME authorizations is empty for {domain}")))?
+        .map_err(|err| Error::Unspecified(format!("error getting ACME authorization for {domain}: {err}")))?;
+    if !matches!(authorization.status, AuthorizationStatus::Pending | AuthorizationStatus::Valid) {
+        return Err(Error::Unspecified(format!(
+            "unexpected ACME order status for {domain} (status: {:?})",
+            authorization.status
+        )));
     }
+
+    let mut challenge = authorization
+        .challenge(ChallengeType::TlsAlpn01)
+        .ok_or(Error::Unspecified("tls-alpn-01 challenge not found".to_string()))?;
+
+    let acme_challenge = AcmeChallenge {
+        key_authorization: challenge.key_authorization(),
+    };
+    challenges_store.insert(domain.to_string(), acme_challenge);
+
+    challenge
+        .set_ready()
+        .await
+        .map_err(|err| Error::Unspecified(format!("error setting ACME challenge as ready for {domain}: {err}")))?;
+
+    debug!(domain, "acme: challenge ready. Waiting for server verification");
+
+    let status = order
+        .poll_ready(&RetryPolicy::default())
+        .await
+        .map_err(|err| Error::Unspecified(format!("error polling ACME challenge for {domain}: {err}")))?;
+    if status != OrderStatus::Ready {
+        return Err(Error::Unspecified(format!(
+            "unexpected ACME order status for {domain} (status: {status:?})"
+        )));
+    }
+
+    let private_key_pem = order
+        .finalize()
+        .await
+        .map_err(|err| Error::Unspecified(format!("error getting private key for ACME order for {domain}: {err}")))?;
+    let cert_chain_pem = order.poll_certificate(&RetryPolicy::default()).await.map_err(|err| {
+        Error::Unspecified(format!("error getting certificate chain for ACME order for {domain}: {err}"))
+    })?;
+
+    challenges_store.remove(domain);
+
+    return Ok((private_key_pem, cert_chain_pem));
 }
 
 pub(super) async fn load_or_create_acme_account(
@@ -250,7 +306,7 @@ pub(super) async fn load_or_create_acme_account(
             };
             let acme_config_file_content = serde_json::to_vec_pretty(&acme_config)
                 .map_err(|err| Error::Config(format!("error serializing ACME account: {err}")))?;
-            fs::write(&acme_config_path, &acme_config_file_content)
+            write_cert_file(&acme_config_path, &acme_config_file_content)
                 .await
                 .map_err(|err| {
                     Error::Config(format!("error saving ACME account credentials to {acme_config_path:?}: {err}"))

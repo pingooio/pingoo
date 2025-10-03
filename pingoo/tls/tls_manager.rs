@@ -1,31 +1,41 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    fmt::Debug,
+    os::unix::fs::PermissionsExt,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use dashmap::DashMap;
-use instant_acme::KeyAuthorization;
+use futures::TryFutureExt;
 use rustls::{ServerConfig, crypto::CryptoProvider, server::ClientHello};
-use tokio::fs;
+use tokio::{fs, io::AsyncWriteExt};
 use tracing::warn;
 
 use crate::{
     Error,
     config::{DEFAULT_TLS_FOLDER, TlsConfig},
     tls::{
-        acme::load_or_create_acme_account,
+        acme::{AcmeChallenge, load_or_create_acme_account},
         certificate::{Certificate, generate_self_signed_certificates, parse_certificate_and_private_key},
     },
 };
 
-pub struct TlsManager {
-    pub default_certificate: Certificate,
-    /// certificates indexed by their Subject Alternative Names that don't contain a wildcard
-    pub certificates: DashMap<String, Arc<Certificate>>,
-    /// certificates that have at least 1 Subject Alternative Name containing a wildcard
-    wildcard_certificates: Vec<Arc<Certificate>>,
+const TLS_DIRECTORY_PERMISSIONS: u32 = 0o700;
 
-    pub acme_account: instant_acme::Account,
-    pub acme_directory_url: String,
-    pub acme_domains: Vec<String>,
-    pub acme_authorizations: DashMap<String, KeyAuthorization>,
+pub struct TlsManager {
+    pub(super) default_certificate: Certificate,
+    /// certificates indexed by their Subject Alternative Names that don't contain a wildcard
+    pub(super) certificates: DashMap<String, Arc<Certificate>>,
+    /// certificates that have at least 1 Subject Alternative Name containing a wildcard
+    pub(super) wildcard_certificates: Vec<Arc<Certificate>>,
+
+    pub(super) acme: Option<Arc<AcmeConfig>>,
+}
+
+pub(super) struct AcmeConfig {
+    pub account: instant_acme::Account,
+    pub domains: Vec<String>,
+    pub challenges: DashMap<String, AcmeChallenge>,
 }
 
 impl TlsManager {
@@ -34,23 +44,44 @@ impl TlsManager {
             .await
             .map_err(|err| Error::Config(format!("error creating TLS folder ({DEFAULT_TLS_FOLDER}): {err}")))?;
 
+        let tls_dir_metadata = fs::metadata(DEFAULT_TLS_FOLDER).await.map_err(|err| {
+            Error::Config(format!("error reading metadata for TLS folder ({DEFAULT_TLS_FOLDER}): {err}"))
+        })?;
+        let mut permissions = tls_dir_metadata.permissions();
+        if permissions.mode() != TLS_DIRECTORY_PERMISSIONS {
+            permissions.set_mode(0o700);
+            fs::set_permissions(DEFAULT_TLS_FOLDER, permissions)
+                .await
+                .map_err(|err| {
+                    Error::Config(format!(
+                        "error updating permissions for TLS folder ({DEFAULT_TLS_FOLDER}): {err}"
+                    ))
+                })?;
+        }
+
         let (certificates, wildcard_certificates) = load_certificates(DEFAULT_TLS_FOLDER).await?;
 
         let default_certificate = load_or_create_default_certificate(DEFAULT_TLS_FOLDER.into()).await?;
 
-        let acme_config = tls_config.acme.clone().unwrap_or_default();
-
-        let acme_account = load_or_create_acme_account(DEFAULT_TLS_FOLDER, acme_config.directory_url.clone()).await?;
+        let acme = match &tls_config.acme {
+            Some(acme_config) => {
+                let acme_account =
+                    load_or_create_acme_account(DEFAULT_TLS_FOLDER, acme_config.directory_url.clone()).await?;
+                Some(Arc::new(AcmeConfig {
+                    account: acme_account,
+                    domains: acme_config.domains.clone(),
+                    challenges: DashMap::new(),
+                }))
+            }
+            None => None,
+        };
 
         Ok(TlsManager {
             default_certificate,
             certificates,
             wildcard_certificates,
 
-            acme_account,
-            acme_directory_url: acme_config.directory_url,
-            acme_domains: acme_config.domains,
-            acme_authorizations: DashMap::new(),
+            acme,
         })
     }
 
@@ -167,18 +198,20 @@ async fn load_or_create_default_certificate(mut certs_dir: PathBuf) -> Result<Ce
             let (default_certificate, pem) = generate_self_signed_certificates(&["*"])?;
 
             // save certificate and private key
-            fs::write(&default_cert_path, pem.cert.as_bytes())
+            write_cert_file(&default_cert_path, pem.cert.as_bytes())
                 .await
                 .map_err(|err| {
                     Error::Tls(format!("error writing default TLS certificate to {default_cert_path:?}: {err}"))
                 })?;
 
             default_cert_path.set_extension("key");
-            fs::write(&default_cert_path, pem.key.as_bytes()).await.map_err(|err| {
-                Error::Tls(format!(
-                    "error writing private key for default TLS certificate to {default_cert_path:?}: {err}"
-                ))
-            })?;
+            write_cert_file(&default_cert_path, pem.key.as_bytes())
+                .await
+                .map_err(|err| {
+                    Error::Tls(format!(
+                        "error writing private key for default TLS certificate to {default_cert_path:?}: {err}"
+                    ))
+                })?;
 
             Ok(default_certificate)
         }
@@ -195,4 +228,25 @@ async fn load_or_create_default_certificate(mut certs_dir: PathBuf) -> Result<Ce
     }
 
     return Ok(default_cert);
+}
+
+pub async fn write_cert_file(path: impl AsRef<Path> + Debug, contents: impl AsRef<[u8]>) -> Result<(), Error> {
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .mode(0o600)
+        .truncate(true)
+        .open(&path)
+        .map_err(|err| Error::Unspecified(err.to_string()))
+        .await?;
+
+    file.write_all(contents.as_ref())
+        .await
+        .map_err(|err| Error::Unspecified(format!("error when writing data to file: {err}")))?;
+
+    file.flush()
+        .await
+        .map_err(|err| Error::Unspecified(format!("error when flushing data to file: {err}")))?;
+
+    return Ok(());
 }
