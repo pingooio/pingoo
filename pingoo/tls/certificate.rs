@@ -37,8 +37,6 @@ pub struct CertificateMetadata {
     pub not_before: DateTime<Utc>,
 }
 
-pub struct SelfSignedCertificateOptions {}
-
 #[derive(Zeroize, ZeroizeOnDrop)]
 pub struct PrivateKeyAndCertPem {
     pub key: String,
@@ -149,17 +147,19 @@ fn get_certificate_metdata(cert_der: &[u8], private_key_der: &[u8]) -> Result<Ce
     });
 }
 
-//
 pub fn generate_self_signed_certificates(hostnames: &[&str]) -> Result<(Certificate, PrivateKeyAndCertPem), Error> {
     let now = Utc::now();
     let mut cert_params: CertificateParams = Default::default();
+    // 1 year validaity by default
     cert_params.not_before = rcgen::date_time_ymd(now.year(), now.month() as u8, now.day() as u8);
     cert_params.not_after = rcgen::date_time_ymd(now.year() + 1, now.month() as u8, now.day() as u8);
+
     // TODO
     cert_params.distinguished_name = DistinguishedName::new();
     cert_params
         .distinguished_name
-        .push(DnType::CommonName, "pingoo self-signed certificate");
+        .push(DnType::CommonName, "Pingoo self-signed certificate");
+
     cert_params.subject_alt_names = hostnames
         .iter()
         .map(|hostname| {
@@ -168,10 +168,6 @@ pub fn generate_self_signed_certificates(hostnames: &[&str]) -> Result<(Certific
             })?))
         })
         .collect::<Result<_, Error>>()?;
-
-    // let keypair = EcdsaKeyPair::generate( &ECDSA_P256_SHA256_FIXED_SIGNING )?;
-    // let priva = keypair.private_key();
-    // priva.as_der()?.
 
     let key_pair = KeyPair::generate()
         .map_err(|err| Error::Tls(format!("error generating keypair for self-signed certificate: {err}")))?;

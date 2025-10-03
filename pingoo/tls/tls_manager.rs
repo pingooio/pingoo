@@ -1,98 +1,70 @@
 use std::{path::PathBuf, sync::Arc};
 
-use arc_swap::ArcSwap;
-use indexmap::IndexMap;
+use dashmap::DashMap;
+use instant_acme::KeyAuthorization;
 use rustls::{ServerConfig, crypto::CryptoProvider, server::ClientHello};
 use tokio::fs;
+use tracing::warn;
 
 use crate::{
     Error,
-    config::TlsConfig,
-    tls::certificate::{Certificate, generate_self_signed_certificates, parse_certificate_and_private_key},
+    config::{DEFAULT_TLS_FOLDER, TlsConfig},
+    tls::{
+        acme::load_or_create_acme_account,
+        certificate::{Certificate, generate_self_signed_certificates, parse_certificate_and_private_key},
+    },
 };
 
-pub struct CertManager {
-    default_certificate: ArcSwap<Certificate>,
+pub struct TlsManager {
+    pub default_certificate: Certificate,
     /// certificates indexed by their Subject Alternative Names that don't contain a wildcard
-    certificates: ArcSwap<IndexMap<String, Arc<Certificate>>>,
+    pub certificates: DashMap<String, Arc<Certificate>>,
     /// certificates that have at least 1 Subject Alternative Name containing a wildcard
-    wildcard_certificates: ArcSwap<Vec<Arc<Certificate>>>,
+    wildcard_certificates: Vec<Arc<Certificate>>,
+
+    pub acme_account: instant_acme::Account,
+    pub acme_directory_url: String,
+    pub acme_domains: Vec<String>,
+    pub acme_authorizations: DashMap<String, KeyAuthorization>,
 }
 
-impl CertManager {
+impl TlsManager {
     pub async fn new(tls_config: &TlsConfig) -> Result<Self, Error> {
-        let certs_dir_exists = fs::try_exists(&tls_config.folder).await.map_err(|err| {
-            Error::Config(format!("error reading certificates folder ({:?}): {err}", &tls_config.folder))
-        })?;
+        fs::create_dir_all(DEFAULT_TLS_FOLDER)
+            .await
+            .map_err(|err| Error::Config(format!("error creating TLS folder ({DEFAULT_TLS_FOLDER}): {err}")))?;
 
-        if !certs_dir_exists {
-            fs::create_dir_all(&tls_config.folder).await.map_err(|err| {
-                Error::Config(format!("error creating certificates folder ({:?}): {err}", &tls_config.folder))
-            })?;
-        }
+        let (certificates, wildcard_certificates) = load_certificates(DEFAULT_TLS_FOLDER).await?;
 
-        let mut cert_dir = fs::read_dir(&tls_config.folder).await.map_err(|err| {
-            Error::Config(format!("error reading certificates folder ({:?}): {err}", &tls_config.folder))
-        })?;
+        let default_certificate = load_or_create_default_certificate(DEFAULT_TLS_FOLDER.into()).await?;
 
-        // list certs
-        let mut certificate_paths = Vec::new();
-        while let Ok(Some(entry)) = cert_dir.next_entry().await {
-            let path = entry.path();
-            let file_type = entry
-                .file_type()
-                .await
-                .map_err(|err| Error::Config(format!("error getting file type for {path:?}: {err}")))?;
-            if !file_type.is_file() {
-                continue;
-            }
+        let acme_config = tls_config.acme.clone().unwrap_or_default();
 
-            let file_extension = path.extension().unwrap_or_default().to_str().unwrap_or_default();
-            // we expect that all .pem files are certificates
-            if file_extension == "pem" && path.file_name().unwrap_or_default().to_str().unwrap_or_default() != "default"
-            {
-                certificate_paths.push(path);
-            }
-        }
+        let acme_account = load_or_create_acme_account(DEFAULT_TLS_FOLDER, acme_config.directory_url.clone()).await?;
 
-        let mut certificates = IndexMap::with_capacity(certificate_paths.len());
-        let mut wildcard_certificates = Vec::new();
-        for cert_file_path in certificate_paths {
-            let certificate = Arc::new(load_certificate(&cert_file_path).await?);
+        Ok(TlsManager {
+            default_certificate,
+            certificates,
+            wildcard_certificates,
 
-            for hostname in &certificate.metadata.hostnames {
-                certificates.insert(hostname.clone(), certificate.clone());
-            }
-            if certificate.metadata.wildcard_matchers.len() != 0 {
-                wildcard_certificates.push(certificate.clone());
-            }
-        }
-
-        let default_certificate = load_or_create_default_certificate(tls_config.folder.clone()).await?;
-
-        // TODO: read certs folder
-        // load all certificates
-        // generate default certificate if dosesnt exist
-
-        Ok(CertManager {
-            default_certificate: ArcSwap::new(Arc::new(default_certificate)),
-            certificates: ArcSwap::new(Arc::new(certificates)),
-            wildcard_certificates: ArcSwap::new(Arc::new(wildcard_certificates)),
+            acme_account,
+            acme_directory_url: acme_config.directory_url,
+            acme_domains: acme_config.domains,
+            acme_authorizations: DashMap::new(),
         })
     }
 
-    pub async fn get_server_config(&self, client_hello: ClientHello<'_>) -> Arc<ServerConfig> {
+    pub async fn get_server_config(&self, client_hello: &ClientHello<'_>) -> Arc<ServerConfig> {
         // Server Name Indicator, SNI
         let sni = client_hello.server_name().unwrap_or_default();
 
         let mut tls_config = {
             // first, we try an exact match of the SNI against the certificates Subject Alternative Names
-            let key = match self.certificates.load().get(sni) {
+            let key = match self.certificates.get(sni) {
                 Some(cert) => cert.key.clone(),
                 None => {
                     // if not found, we try with certificates that contain wildcard Subject Alternative Names
                     self.wildcard_certificates
-                        .load()
                         .iter()
                         .find(|cert| {
                             cert.metadata
@@ -102,7 +74,7 @@ impl CertManager {
                         })
                         .map(|cert| cert.key.clone())
                         // Finally, if still not found, we serve the default certificate
-                        .unwrap_or(self.default_certificate.load().key.clone())
+                        .unwrap_or(self.default_certificate.key.clone())
                 }
             };
 
@@ -120,6 +92,51 @@ impl CertManager {
 
         return Arc::new(tls_config);
     }
+}
+
+async fn load_certificates(
+    directory_path: &str,
+) -> Result<(DashMap<String, Arc<Certificate>>, Vec<Arc<Certificate>>), Error> {
+    let mut directory = fs::read_dir(directory_path)
+        .await
+        .map_err(|err| Error::Config(format!("error reading certificates folder ({directory_path}): {err}")))?;
+
+    // list certs
+    let mut certificate_paths = Vec::new();
+    while let Ok(Some(entry)) = directory.next_entry().await {
+        let path = entry.path();
+        let file_type = entry
+            .file_type()
+            .await
+            .map_err(|err| Error::Config(format!("error getting file type for {path:?}: {err}")))?;
+        if !file_type.is_file() {
+            continue;
+        }
+
+        let file_extension = path.extension().unwrap_or_default().to_str().unwrap_or_default();
+        // we expect that all .pem files are certificates
+        if file_extension == "pem" && path.file_name().unwrap_or_default().to_str().unwrap_or_default() != "default" {
+            certificate_paths.push(path);
+        }
+    }
+
+    let certificates = DashMap::with_capacity(certificate_paths.len());
+    let mut wildcard_certificates = Vec::new();
+    for cert_file_path in certificate_paths {
+        let certificate = Arc::new(load_certificate(&cert_file_path).await?);
+
+        for hostname in &certificate.metadata.hostnames {
+            if certificates.contains_key(hostname) {
+                warn!("duplicate TLS certificate found for {hostname}");
+            }
+            certificates.insert(hostname.clone(), certificate.clone());
+        }
+        if certificate.metadata.wildcard_matchers.len() != 0 {
+            wildcard_certificates.push(certificate.clone());
+        }
+    }
+
+    return Ok((certificates, wildcard_certificates));
 }
 
 async fn load_certificate(cert_file_path: &PathBuf) -> Result<Certificate, Error> {

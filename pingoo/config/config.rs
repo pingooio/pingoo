@@ -10,7 +10,7 @@ use http::StatusCode;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
-use tracing::info;
+use tracing::{debug, info};
 
 use crate::{
     Error,
@@ -18,12 +18,13 @@ use crate::{
     lists::ListType,
     rules::Rule,
     service_discovery::service_registry::Upstream,
+    tls::acme::LETSENCRYPT_PRODUCTION_URL,
 };
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DEFAULT_CONFIG_FILE: &str = "/etc/pingoo/pingoo.yml";
 pub const DEFAULT_CONFIG_FOLDER: &str = "/etc/pingoo";
-pub const DEFAULT_TLS_FOLDER: &str = "/etc/pingoo/certificates";
+pub const DEFAULT_TLS_FOLDER: &str = "/etc/pingoo/tls";
 pub const GEOIP_DATABASE_PATHS: &[&str] = &[
     "/etc/pingoo/geoip.mmdb",
     "/etc/pingoo/geoip.mmdb.zst",
@@ -101,8 +102,29 @@ pub struct StaticSiteServiceNotFound {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct TlsConfig {
-    #[serde(default = "default_tls_folder")]
-    pub folder: PathBuf,
+    pub acme: Option<TlsAcmeConfig>,
+}
+
+impl Default for TlsConfig {
+    fn default() -> Self {
+        TlsConfig { acme: None }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct TlsAcmeConfig {
+    #[serde(default = "default_tls_acme_rirectory_url")]
+    pub directory_url: String,
+    pub domains: Vec<String>,
+}
+
+impl Default for TlsAcmeConfig {
+    fn default() -> Self {
+        TlsAcmeConfig {
+            domains: Vec::new(),
+            directory_url: default_tls_acme_rirectory_url(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Default)]
@@ -245,9 +267,16 @@ pub async fn load_and_validate() -> Result<Config, Error> {
         .collect::<Result<_, rules::Error>>()
         .map_err(|err| Error::Config(format!("error parsing rules: {err}")))?;
 
-    let tls_config = config_file.tls.unwrap_or(TlsConfig {
-        folder: default_tls_folder(),
-    });
+    let tls_config = config_file.tls.unwrap_or_default();
+    if let Some(acme_config) = &tls_config.acme {
+        debug!(directory_url = acme_config.directory_url, domains = ?acme_config.domains, "config: ACME");
+
+        if acme_config.domains.iter().any(|domain| domain.contains('*')) {
+            return Err(Error::Config(
+                "Pingoo currently doesn't support wildcard domains for automatic TLS (ACME)".to_string(),
+            ));
+        }
+    }
 
     let lists = config_file
         .lists
@@ -388,10 +417,10 @@ where
     b.into_iter().find(|item| set_a.contains(item))
 }
 
-fn default_tls_folder() -> PathBuf {
-    return DEFAULT_TLS_FOLDER.into();
-}
-
 fn default_docker_socket() -> String {
     return ::docker::DEFAULT_DOCKER_SOCKET.to_string();
+}
+
+fn default_tls_acme_rirectory_url() -> String {
+    return LETSENCRYPT_PRODUCTION_URL.to_string();
 }

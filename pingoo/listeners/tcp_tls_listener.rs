@@ -8,19 +8,19 @@ use crate::{
     config::ListenerConfig,
     listeners::{GRACEFUL_SHUTDOWN_TIMEOUT, Listener, accept_tcp_connection, accept_tls_connection, bind_tcp_socket},
     services::TcpService,
-    tls::CertManager,
+    tls::TlsManager,
 };
 
 pub struct TcpAndTlsListener {
     name: String,
     address: SocketAddr,
     socket: Option<tokio::net::TcpListener>,
-    cert_manager: Arc<CertManager>,
+    cert_manager: Arc<TlsManager>,
     service: Arc<dyn TcpService>,
 }
 
 impl TcpAndTlsListener {
-    pub fn new(config: ListenerConfig, cert_manager: Arc<CertManager>, service: Arc<dyn TcpService>) -> Self {
+    pub fn new(config: ListenerConfig, cert_manager: Arc<TlsManager>, service: Arc<dyn TcpService>) -> Self {
         return TcpAndTlsListener {
             name: config.name,
             address: config.address,
@@ -54,7 +54,7 @@ impl Listener for TcpAndTlsListener {
                         Err(_) => continue,
                     };
 
-                    if let Ok(tls_stream) =
+                    if let Ok(Some(tls_stream)) =
                         accept_tls_connection(tcp_stream, self.cert_manager.clone(), client_socket_addr, &self.name).await
                     {
                         let service = self.service.clone();

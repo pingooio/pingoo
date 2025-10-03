@@ -14,7 +14,7 @@ Pingoo uses the `/etc/pingoo` directory to load and store its configuration file
 
 Pingoo needs **read and write** permission to the configuration directory.
 
-Pingoo uses the `/etc/pingoo/certificates` directory to load and store TLS certificates. Visit the [TLS page](/docs/tls) to learn more about TLS configuration.
+Pingoo uses the `/etc/pingoo/tls` directory to load and store TLS certificates. Visit the [TLS page](/docs/tls) to learn more about TLS configuration.
 
 
 ## Configuration File

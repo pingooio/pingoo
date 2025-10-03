@@ -8,20 +8,40 @@ url: "/docs/tls"
 # TLS
 
 
-TLS certificates are stored and read from the `/etc/pingoo/certificates` folder.
+TLS certificates are stored and read from the `/etc/pingoo/tls` folder.
 
 Private keys must have the `.key` extension and public certificates / certificate chains must have the `.pem` extension.
 
 For example:
 ```bash
-$ ls /etc/pingoo/certificates
+$ ls /etc/pingoo/tls
 pingoo.io.key
 pingoo.io.pem
 ```
 
-Pingoo automatically parses TLS certificates and match the hostname provided in the Server Name Indication (SNI) of the TLS protocol with the Subject Alternative Names (SANs) of the certificates to know which one to use when serving `https` / `tcp+tls`.
+Pingoo automatically parses TLS certificates and match the hostname provided in the Server Name Indication (SNI) of the TLS protocol with the Subject Alternative Names (SANs) of the certificates to know which one to use when serving `https` / `tcp+tls` connections.
 
 If no certificate is found for the requested domain, a default self-signed certificate is used.
+
+
+## Automatic HTTPS / TLS (ACME)
+
+Pingoo supports the Automatic Certificate Management Environment (ACME) protocol in order to provide fully-automated certificate management.
+
+**pingoo.yml**
+```yml
+listeners:
+  https:
+    address: https://0.0.0.0
+
+tls:
+  acme:
+    domains: ["pingoo.io"]
+```
+
+Pingoo currently doesn't support wildcard certificates when using ACME.
+
+Pingoo currently supports only the [tls-alpn-01](https://letsencrypt.org/docs/challenge-types/#tls-alpn-01) challenge. It means that one of your TLS listeners must mu publicly accessible on the port `443`.
 
 
 

@@ -15,7 +15,7 @@ use crate::{
     },
     rules::Rule,
     services::HttpService,
-    tls::CertManager,
+    tls::TlsManager,
 };
 
 pub struct HttpsListener {
@@ -23,7 +23,7 @@ pub struct HttpsListener {
     address: SocketAddr,
     socket: Option<tokio::net::TcpListener>,
     services: Arc<Vec<Arc<dyn HttpService>>>,
-    cert_manager: Arc<CertManager>,
+    cert_manager: Arc<TlsManager>,
     rules: Arc<Vec<Rule>>,
     lists: Arc<bel::Value>,
     geoip: Option<Arc<GeoipDB>>,
@@ -33,7 +33,7 @@ pub struct HttpsListener {
 impl HttpsListener {
     pub fn new(
         config: ListenerConfig,
-        cert_manager: Arc<CertManager>,
+        cert_manager: Arc<TlsManager>,
         services: Vec<Arc<dyn HttpService>>,
         rules: Arc<Vec<Rule>>,
         lists: Arc<bel::Value>,
@@ -86,15 +86,15 @@ impl Listener for HttpsListener {
                     )
                     .await
                     {
-                        Ok(tls_stream) => tls_stream,
-                        Err(_) => continue,
+                        Ok(Some(tls_stream)) => tls_stream,
+                        _ => continue,
                     };
 
                     // We currently only support HTTP/2 requests for TLS connections.
                     // HTTP/2 was introduced in 2015 and is supported by virtually all browsers
                     // and client libraries: https://caniuse.com/http2
                     // Only unmaintained bots don't support HTTP/2
-                    // Clients are informed of this via the ALPN TLS field.
+                    // It's totally transparent as clients are informed of this via the ALPN TLS field.
                     tokio::spawn(serve_http_requests(
                         TokioIo::new(tls_stream),
                         self.services.clone(),

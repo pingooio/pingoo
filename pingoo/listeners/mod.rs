@@ -6,11 +6,14 @@ use std::{
 
 use rustls::server::Acceptor;
 use socket2::{Domain, Socket, Type};
-use tokio::{net::TcpStream, sync::watch};
+use tokio::{io::AsyncWriteExt, net::TcpStream, sync::watch};
 use tokio_rustls::{LazyConfigAcceptor, server::TlsStream};
 use tracing::debug;
 
-use crate::{Error, tls::CertManager};
+use crate::{
+    Error,
+    tls::{TlsManager, acme::is_tls_alpn_challenge},
+};
 
 mod http_listener;
 mod https_listener;
@@ -110,23 +113,39 @@ async fn accept_tcp_connection(
     return Ok(connection);
 }
 
+// returns Ok(None) if it's an ACME tls-alpn-01 connection
 async fn accept_tls_connection<IO: Unpin + tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + 'static>(
     tcp_stream: IO,
-    cert_manager: Arc<CertManager>,
+    tls_manager: Arc<TlsManager>,
     client_socket_addr: SocketAddr,
     listener_name: &str,
-) -> Result<TlsStream<IO>, ()> {
-    let tls_start = match LazyConfigAcceptor::new(Acceptor::default(), tcp_stream).await {
-        Ok(tls_start) => tls_start,
+) -> Result<Option<TlsStream<IO>>, ()> {
+    let tls_start_handshake = match LazyConfigAcceptor::new(Acceptor::default(), tcp_stream).await {
+        Ok(tls_start_handshake) => tls_start_handshake,
         Err(err) => {
             debug!(listener = listener_name, client = ?client_socket_addr, "error accepting TLS connection: {err:?}");
             return Err(());
         }
     };
 
-    let client_hello = tls_start.client_hello();
-    let tls_config = cert_manager.get_server_config(client_hello).await;
-    let tcp_stream = match tls_start.into_stream(tls_config).await {
+    let client_hello = tls_start_handshake.client_hello();
+
+    // handle ACME tls-alpn-01 challenges
+    if is_tls_alpn_challenge(&client_hello) {
+        let tls_config_acme = tls_manager.get_tls_alpn_01_server_config(&client_hello).await;
+        let mut stream = match tls_start_handshake.into_stream(tls_config_acme).await {
+            Ok(stream) => stream,
+            Err(err) => {
+                debug!(listener = listener_name, client = ?client_socket_addr, "error converting TLS stream to TCP stream for ACME: {err:?}");
+                return Err(());
+            }
+        };
+        let _ = stream.shutdown().await;
+        return Ok(None);
+    }
+
+    let tls_config = tls_manager.get_server_config(&client_hello).await;
+    let tcp_stream = match tls_start_handshake.into_stream(tls_config).await {
         Ok(tcp_stream) => tcp_stream,
         Err(err) => {
             debug!(listener = listener_name, client = ?client_socket_addr, "error converting TLS stream to TCP stream: {err:?}");
@@ -136,5 +155,5 @@ async fn accept_tls_connection<IO: Unpin + tokio::io::AsyncRead + tokio::io::Asy
 
     debug!(listener = listener_name, client = ?client_socket_addr, "TLS connection accepted");
 
-    return Ok(tcp_stream);
+    return Ok(Some(tcp_stream));
 }

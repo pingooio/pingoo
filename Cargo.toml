@@ -40,7 +40,6 @@ serde_yaml = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 uuid = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 
 
-arc-swap = "1"
 async-trait = "0.1"
 aws-lc-rs = "1"
 bytes = "1"
@@ -56,7 +55,8 @@ http-body-util = "0.1"
 hyper = "1"
 hyper-rustls = "0.27"
 hyper-util = "0.1"
-indexmap = { version = "2" }
+indexmap = "2"
+instant-acme = "0.8"
 mimalloc = "0.1"
 moka = "0.12"
 rand = "0.9"
@@ -109,8 +109,8 @@ uuid = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 
 
 thiserror = { git = "https://github.com/dtolnay/thiserror", rev = "d2c492b5498a0134abcc1677101bec876fe0621a" }
-async-trait  = { git = "https://github.com/dtolnay/async-trait", rev = "fbd86047d853c78d0c646fb947e39b73d53ead0d" }
+async-trait = { git = "https://github.com/dtolnay/async-trait", rev = "fbd86047d853c78d0c646fb947e39b73d53ead0d" }
 serde = { git = "https://github.com/serde-rs/serde", rev = "a866b336f14aa57a07f0d0be9f8762746e64ecb4" }
-serde_core  = { git = "https://github.com/serde-rs/serde", rev = "a866b336f14aa57a07f0d0be9f8762746e64ecb4" }
-serde_derive  = { git = "https://github.com/serde-rs/serde", rev = "a866b336f14aa57a07f0d0be9f8762746e64ecb4" }
-serde_json  = { git = "https://github.com/serde-rs/json", rev = "b9cafe2626e20703cb24620af6bbad6dbd3b807f" }
+serde_core = { git = "https://github.com/serde-rs/serde", rev = "a866b336f14aa57a07f0d0be9f8762746e64ecb4" }
+serde_derive = { git = "https://github.com/serde-rs/serde", rev = "a866b336f14aa57a07f0d0be9f8762746e64ecb4" }
+serde_json = { git = "https://github.com/serde-rs/json", rev = "b9cafe2626e20703cb24620af6bbad6dbd3b807f" }

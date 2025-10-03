@@ -16,7 +16,7 @@ use crate::{
     config::{Config, ListenerProtocol},
     error::Error,
     listeners::{self},
-    tls::CertManager,
+    tls::TlsManager,
 };
 
 /// The Server binds the listeners.
@@ -72,7 +72,8 @@ impl Server {
 
         let rules = Arc::new(self.config.rules);
 
-        let cert_manager = Arc::new(CertManager::new(&self.config.tls).await?);
+        let cert_manager = Arc::new(TlsManager::new(&self.config.tls).await?);
+        cert_manager.clone().start_acme_in_background();
 
         for listener_config in self.config.listeners {
             let listener_address = listener_config.address;
