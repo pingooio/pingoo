@@ -59,14 +59,13 @@ impl TlsManager {
 
                             debug!(domain, "acme: ordering certificate");
 
-                            let (private_key_pem, cert_chain_pem) =
-                                match tls_manager.order_certificate(&domain).await {
-                                    Ok(cert) => cert,
-                                    Err(err) => {
-                                        error!(domain, "TLS: error ordering TLS certificate: {err}");
-                                        return;
-                                    }
-                                };
+                            let (private_key_pem, cert_chain_pem) = match tls_manager.order_certificate(&domain).await {
+                                Ok(cert) => cert,
+                                Err(err) => {
+                                    error!(domain, "TLS: error ordering TLS certificate: {err}");
+                                    return;
+                                }
+                            };
 
                             debug!(domain, "acme: order successfully completed");
 
@@ -214,7 +213,10 @@ impl TlsManager {
     }
 }
 
-pub(super) async fn load_or_create_acme_account(tls_folder_path: &str,acme_directory_url: String) -> Result<instant_acme::Account, Error> {
+pub(super) async fn load_or_create_acme_account(
+    tls_folder_path: &str,
+    acme_directory_url: String,
+) -> Result<instant_acme::Account, Error> {
     let mut acme_config_path: PathBuf = tls_folder_path.into();
     acme_config_path.push("acme.json");
 
