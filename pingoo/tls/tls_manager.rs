@@ -7,7 +7,11 @@ use std::{
 
 use dashmap::DashMap;
 use futures::TryFutureExt;
-use rustls::{ServerConfig, crypto::CryptoProvider, server::ClientHello};
+use rustls::{
+    ServerConfig,
+    crypto::CryptoProvider,
+    server::{ClientHello, ResolvesServerCert},
+};
 use tokio::{fs, io::AsyncWriteExt};
 use tracing::warn;
 
@@ -22,6 +26,7 @@ use crate::{
 
 const TLS_DIRECTORY_PERMISSIONS: u32 = 0o700;
 
+#[derive(Debug)]
 pub struct TlsManager {
     pub(super) default_certificate: Certificate,
     /// certificates indexed by their Subject Alternative Names that don't contain a wildcard
@@ -36,6 +41,16 @@ pub(super) struct AcmeConfig {
     pub account: instant_acme::Account,
     pub domains: Vec<String>,
     pub challenges: DashMap<String, AcmeChallenge>,
+}
+
+impl Debug for AcmeConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AcmeConfig")
+            .field("account", &"[REDACTED]")
+            .field("domains", &self.domains)
+            .field("challenges", &"[REDACTED]")
+            .finish()
+    }
 }
 
 impl TlsManager {
@@ -85,43 +100,46 @@ impl TlsManager {
         })
     }
 
-    pub async fn get_server_config(&self, client_hello: &ClientHello<'_>) -> Arc<ServerConfig> {
-        // Server Name Indicator, SNI
+    pub fn get_tls_server_config(
+        self: &Arc<Self>,
+        alpn_protocols: impl IntoIterator<Item = Vec<u8>>,
+    ) -> Arc<ServerConfig> {
+        // we only support TLS 1.3
+        // TLS 1.3 was introduced in 2018 and is supported by virtually all browsers
+        // and client libraries: https://caniuse.com/tls1-3
+        // Only unmaintained bots don't support TLS 1.3
+        let mut tls_server_config = ServerConfig::builder_with_protocol_versions(&[&rustls::version::TLS13])
+            .with_no_client_auth()
+            .with_cert_resolver(self.clone());
+
+        tls_server_config.alpn_protocols.extend(alpn_protocols);
+
+        return Arc::new(tls_server_config);
+    }
+}
+
+impl ResolvesServerCert for TlsManager {
+    fn resolve(&self, client_hello: ClientHello<'_>) -> Option<Arc<rustls::sign::CertifiedKey>> {
         let sni = client_hello.server_name().unwrap_or_default();
-
-        let mut tls_config = {
-            // first, we try an exact match of the SNI against the certificates Subject Alternative Names
-            let key = match self.certificates.get(sni) {
-                Some(cert) => cert.key.clone(),
-                None => {
-                    // if not found, we try with certificates that contain wildcard Subject Alternative Names
-                    self.wildcard_certificates
-                        .iter()
-                        .find(|cert| {
-                            cert.metadata
-                                .wildcard_matchers
-                                .iter()
-                                .any(|matcher| matcher.is_match(sni.as_bytes()))
-                        })
-                        .map(|cert| cert.key.clone())
-                        // Finally, if still not found, we serve the default certificate
-                        .unwrap_or(self.default_certificate.key.clone())
-                }
-            };
-
-            // we only support TLS 1.3
-            // TLS 1.3 was introduced in 2018 and is supported by virtually all browsers
-            // and client libraries: https://caniuse.com/tls1-3
-            // Only unmaintained bots don't support TLS 1.3
-            ServerConfig::builder_with_protocol_versions(&[&rustls::version::TLS13])
-                .with_no_client_auth()
-                .with_cert_resolver(key)
+        // first, we try an exact match of the SNI against the certificates Subject Alternative Names
+        let key = match self.certificates.get(sni) {
+            Some(cert) => cert.key.clone(),
+            None => {
+                // if not found, we try with certificates that contain wildcard Subject Alternative Names
+                self.wildcard_certificates
+                    .iter()
+                    .find(|cert| {
+                        cert.metadata
+                            .wildcard_matchers
+                            .iter()
+                            .any(|matcher| matcher.is_match(sni.as_bytes()))
+                    })
+                    .map(|cert| cert.key.clone())
+                    // Finally, if still not found, we serve the default certificate
+                    .unwrap_or(self.default_certificate.key.clone())
+            }
         };
-
-        tls_config.alpn_protocols = vec![b"h2".to_vec()];
-        // tls_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
-
-        return Arc::new(tls_config);
+        Some(key)
     }
 }
 

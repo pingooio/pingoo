@@ -41,7 +41,7 @@ tls:
 
 Pingoo currently doesn't support wildcard certificates when using ACME.
 
-Pingoo currently supports only the [tls-alpn-01](https://letsencrypt.org/docs/challenge-types/#tls-alpn-01) challenge. It means that one of your TLS listeners must mu publicly accessible on the port `443`.
+Pingoo currently only supports the [tls-alpn-01](https://letsencrypt.org/docs/challenge-types/#tls-alpn-01) challenge. It means that one of your TLS listeners must be publicly accessible on the port `443`.
 
 
 

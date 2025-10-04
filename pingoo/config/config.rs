@@ -10,7 +10,7 @@ use http::StatusCode;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::{
     Error,
@@ -113,7 +113,7 @@ impl Default for TlsConfig {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct TlsAcmeConfig {
-    #[serde(default = "default_tls_acme_rirectory_url")]
+    #[serde(default = "default_tls_acme_directory_url")]
     pub directory_url: String,
     pub domains: Vec<String>,
 }
@@ -122,7 +122,7 @@ impl Default for TlsAcmeConfig {
     fn default() -> Self {
         TlsAcmeConfig {
             domains: Vec::new(),
-            directory_url: default_tls_acme_rirectory_url(),
+            directory_url: default_tls_acme_directory_url(),
         }
     }
 }
@@ -267,8 +267,10 @@ pub async fn load_and_validate() -> Result<Config, Error> {
         .collect::<Result<_, rules::Error>>()
         .map_err(|err| Error::Config(format!("error parsing rules: {err}")))?;
 
-    let tls_config = config_file.tls.unwrap_or_default();
-    if let Some(acme_config) = &tls_config.acme {
+    let mut tls_config = config_file.tls.unwrap_or_default();
+    if let Some(acme_config) = tls_config.acme.as_mut() {
+        acme_config.directory_url = acme_config.directory_url.trim().trim_end_matches('/').to_string();
+
         debug!(directory_url = acme_config.directory_url, domains = ?acme_config.domains, "config: ACME");
 
         if find_duplicate(&acme_config.domains).is_some() {
@@ -285,6 +287,17 @@ pub async fn load_and_validate() -> Result<Config, Error> {
             if !domain.is_ascii() || domain.to_ascii_lowercase().as_str() != domain {
                 return Err(Error::Config(format!("acme: invalid domain: {domain}")));
             }
+        }
+
+        // warn user if none of their TLS listeners listen on port 443.
+        // It's not a hard error as port can be re-mapped e.g. docker run -p 443:8443 [...]
+        if !listeners.iter().any(|listener| {
+            matches!(listener.protocol, ListenerProtocol::Https | ListenerProtocol::TcpAndTls)
+                && listener.address.port() == 443
+        }) {
+            warn!(
+                "config: at least one of your TLS listeners must listen on the port 443 for ACME certificates verification"
+            );
         }
     }
 
@@ -431,6 +444,6 @@ fn default_docker_socket() -> String {
     return ::docker::DEFAULT_DOCKER_SOCKET.to_string();
 }
 
-fn default_tls_acme_rirectory_url() -> String {
+fn default_tls_acme_directory_url() -> String {
     return LETSENCRYPT_PRODUCTION_URL.to_string();
 }

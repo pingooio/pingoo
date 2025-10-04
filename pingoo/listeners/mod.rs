@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use rustls::server::Acceptor;
+use rustls::{ServerConfig, server::Acceptor};
 use socket2::{Domain, Socket, Type};
 use tokio::{io::AsyncWriteExt, net::TcpStream, sync::watch};
 use tokio_rustls::{LazyConfigAcceptor, server::TlsStream};
@@ -119,6 +119,7 @@ async fn accept_tls_connection<IO: Unpin + tokio::io::AsyncRead + tokio::io::Asy
     tls_manager: Arc<TlsManager>,
     client_socket_addr: SocketAddr,
     listener_name: &str,
+    tls_server_config: Arc<ServerConfig>,
 ) -> Result<Option<TlsStream<IO>>, ()> {
     let tls_start_handshake = match LazyConfigAcceptor::new(Acceptor::default(), tcp_stream).await {
         Ok(tls_start_handshake) => tls_start_handshake,
@@ -144,8 +145,7 @@ async fn accept_tls_connection<IO: Unpin + tokio::io::AsyncRead + tokio::io::Asy
         return Ok(None);
     }
 
-    let tls_config = tls_manager.get_server_config(&client_hello).await;
-    let tcp_stream = match tls_start_handshake.into_stream(tls_config).await {
+    let tcp_stream = match tls_start_handshake.into_stream(tls_server_config).await {
         Ok(tcp_stream) => tcp_stream,
         Err(err) => {
             debug!(listener = listener_name, client = ?client_socket_addr, "error converting TLS stream to TCP stream: {err:?}");

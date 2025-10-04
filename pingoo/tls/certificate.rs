@@ -6,11 +6,7 @@ use std::{
 use aws_lc_rs::digest::{SHA256, digest};
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 use rcgen::{CertificateParams, DistinguishedName, DnType, KeyPair, SanType};
-use rustls::{
-    crypto::CryptoProvider,
-    pki_types::CertificateDer,
-    sign::{CertifiedKey, SingleCertAndKey},
-};
+use rustls::{crypto::CryptoProvider, pki_types::CertificateDer, sign::CertifiedKey};
 use wildcard::{Wildcard, WildcardBuilder};
 use x509_parser::prelude::{FromDer, GeneralName, ParsedExtension, X509Certificate};
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -21,7 +17,7 @@ use crate::Error;
 pub struct Certificate {
     /// Both the private key and public certificate.
     /// In rustls terms, it's actually a cert resolver.
-    pub key: Arc<SingleCertAndKey>,
+    pub key: Arc<CertifiedKey>,
     pub metadata: CertificateMetadata,
 }
 
@@ -70,7 +66,7 @@ pub fn parse_certificate_and_private_key(
         .map_err(|err| Error::Tls(format!("error verifying TLS certificates: {err}")))?;
 
     return Ok(Certificate {
-        key: Arc::new(SingleCertAndKey::from(Arc::new(certified_key))),
+        key: Arc::new(certified_key),
         metadata: cert_metdata,
     });
 }

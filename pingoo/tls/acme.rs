@@ -1,7 +1,8 @@
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{fmt::Debug, path::PathBuf, sync::Arc, time::Duration};
 
 use chrono::Utc;
 use dashmap::DashMap;
+use indexmap::IndexMap;
 use instant_acme::{
     AuthorizationStatus, ChallengeType, Identifier, KeyAuthorization, NewOrder, OrderStatus, RetryPolicy,
 };
@@ -20,6 +21,7 @@ use tracing::{debug, error, info};
 use crate::{
     Error,
     config::DEFAULT_TLS_FOLDER,
+    serde_utils,
     services::tcp_proxy_service::retry,
     tls::{TlsManager, certificate::parse_certificate_and_private_key, tls_manager::write_cert_file},
 };
@@ -28,9 +30,32 @@ pub const ACME_TLS_ALPN_NAME: &[u8] = b"acme-tls/1";
 pub const LETSENCRYPT_PRODUCTION_URL: &str = "https://acme-v02.api.letsencrypt.org/directory";
 // const LETSENCRYPT_STAGING_URL: &str = "https://acme-staging-v02.api.letsencrypt.org/directory";
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "version", content = "data")]
+pub enum AcmeConfig {
+    #[serde(rename = "1")]
+    V1(AcmeConfigV1),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AcmeConfigV1 {
+    pub accounts: IndexMap<String, AcmeAccount>,
+}
+
 #[derive(Serialize, Deserialize)]
-pub struct AcmeConfig {
-    pub account: instant_acme::AccountCredentials,
+pub struct AcmeAccount {
+    pub id: String,
+    #[serde(with = "serde_utils::rustls_private_key_der")]
+    pub key: PrivateKeyDer<'static>,
+}
+
+impl Debug for AcmeAccount {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AcmeAccount")
+            .field("id", &self.id)
+            .field("key", &"[REDACTED]")
+            .finish()
+    }
 }
 
 pub(super) struct AcmeChallenge {
@@ -126,11 +151,11 @@ impl TlsManager {
                                     }
                                 },
                                 5,
-                                Duration::from_secs(1),
+                                Duration::from_secs(5),
                             )
                             .await
                             {
-                                error!(domain, "TLS: error saving ACME TLS certificate: {err}");
+                                error!(domain, "acme: error saving TLS certificate: {err}");
                                 return;
                             }
                             info!(domain, "acme: TLS certificate successfully saved");
@@ -144,12 +169,12 @@ impl TlsManager {
         });
     }
 
-    pub async fn get_tls_alpn_01_server_config(&self, client_hello: &ClientHello<'_>) -> Arc<ServerConfig> {
+    pub async fn get_tls_alpn_01_server_config(self: &Arc<Self>, client_hello: &ClientHello<'_>) -> Arc<ServerConfig> {
         let acme = match &self.acme {
             Some(acme) => acme.clone(),
             None => {
                 debug!("got tls-alpn-01 request but ACME config is empty");
-                return self.get_server_config(client_hello).await;
+                return self.get_tls_server_config([]);
             }
         };
 
@@ -163,13 +188,13 @@ impl TlsManager {
             }
             Err(err) => {
                 error!("acme: error getting tls-alpn-01 certificate: {err}");
-                self.get_server_config(client_hello).await
+                self.get_tls_server_config([])
             }
         }
     }
 }
 
-/// generates a self-signed certificate to answer the tls-alpn-01 challenge as specified in
+/// Generates a self-signed certificate to answer the tls-alpn-01 challenge as specified in
 /// [RFC 8737](https://datatracker.ietf.org/doc/html/rfc8737).
 async fn get_tls_alpn_01_cert(
     challenges_store: &DashMap<String, AcmeChallenge>,
@@ -276,45 +301,64 @@ pub(super) async fn load_or_create_acme_account(
     let mut acme_config_path: PathBuf = tls_folder_path.into();
     acme_config_path.push("acme.json");
 
-    match fs::read(&acme_config_path).await {
-        Ok(acme_config_file_content) => {
-            let acme_config: AcmeConfig = serde_json::from_slice(&acme_config_file_content)
-                .map_err(|err| Error::Unspecified(format!("error reading acme.json file: {err}")))?;
-            let acme_account = instant_acme::Account::builder()
-                .map_err(|err| Error::Unspecified(format!("error creating ACME account builder: {err}")))?
-                .from_credentials(acme_config.account)
-                .await
-                .map_err(|err| Error::Unspecified(format!("error loading ACME account: {err}")))?;
-            return Ok(acme_account);
-        }
-        Err(_) => {
-            let (acme_account, acme_credentials) = instant_acme::Account::builder()
-                .map_err(|err| Error::Config(format!("error building ACME client: {err}")))?
-                .create(
-                    &instant_acme::NewAccount {
-                        contact: &[],
-                        terms_of_service_agreed: true,
-                        only_return_existing: false,
-                    },
-                    acme_directory_url.clone(),
-                    None,
-                )
-                .await
-                .map_err(|err| Error::Config(format!("error creating ACME account: {err}")))?;
-            let acme_config = AcmeConfig {
-                account: acme_credentials,
-            };
-            let acme_config_file_content = serde_json::to_vec_pretty(&acme_config)
-                .map_err(|err| Error::Config(format!("error serializing ACME account: {err}")))?;
-            write_cert_file(&acme_config_path, &acme_config_file_content)
-                .await
-                .map_err(|err| {
-                    Error::Config(format!("error saving ACME account credentials to {acme_config_path:?}: {err}"))
-                })?;
-
-            return Ok(acme_account);
+    let acme_config: AcmeConfig = match fs::read(&acme_config_path).await {
+        Ok(acme_config_file_content) => serde_json::from_slice(&acme_config_file_content)
+            .map_err(|err| Error::Unspecified(format!("error reading {acme_config_path:?}: {err}")))?,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => AcmeConfig::V1(AcmeConfigV1 {
+            accounts: IndexMap::new(),
+        }),
+        Err(err) => {
+            return Err(Error::Unspecified(format!(
+                "error reading ACME configuration file ({acme_config_path:?}): {err}"
+            )));
         }
     };
+
+    match acme_config {
+        AcmeConfig::V1(mut acme_config_v1) => {
+            // if there is an account for this directory_url, return it.
+            if let Some(account) = acme_config_v1.accounts.get(&acme_directory_url) {
+                let account_key = PrivatePkcs8KeyDer::try_from(account.key.secret_der())
+                    .map_err(|err| Error::Unspecified(format!("error parsing ACME account key: {err}")))?;
+                let acme_account = instant_acme::Account::builder()
+                    .map_err(|err| Error::Unspecified(format!("error creating ACME account builder: {err}")))?
+                    .from_parts(account.id.clone(), account_key, acme_directory_url)
+                    .await
+                    .map_err(|err| Error::Unspecified(format!("error loading ACME account: {err}")))?;
+                return Ok(acme_account);
+            } else {
+                // otherwise, create a new account and save it
+                let (acme_account, acme_credentials) = instant_acme::Account::builder()
+                    .map_err(|err| Error::Config(format!("error building ACME client: {err}")))?
+                    .create(
+                        &instant_acme::NewAccount {
+                            contact: &[],
+                            terms_of_service_agreed: true,
+                            only_return_existing: false,
+                        },
+                        acme_directory_url.clone(),
+                        None,
+                    )
+                    .await
+                    .map_err(|err| Error::Config(format!("error creating ACME account: {err}")))?;
+                let account = AcmeAccount {
+                    id: acme_credentials.id.clone(),
+                    key: acme_credentials.key_pkcs8,
+                };
+                acme_config_v1.accounts.insert(acme_directory_url, account);
+
+                let acme_config_file_content = serde_json::to_vec_pretty(&AcmeConfig::V1(acme_config_v1))
+                    .map_err(|err| Error::Config(format!("error serializing ACME configuration: {err}")))?;
+                write_cert_file(&acme_config_path, &acme_config_file_content)
+                    .await
+                    .map_err(|err| {
+                        Error::Config(format!("error saving ACME configuration file to {acme_config_path:?}: {err}"))
+                    })?;
+
+                return Ok(acme_account);
+            }
+        }
+    }
 }
 
 /// Returns `true` if the client_hello indicates a TLS-ALPN-01 challenge connection.

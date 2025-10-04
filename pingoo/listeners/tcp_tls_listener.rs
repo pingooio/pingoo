@@ -46,6 +46,8 @@ impl Listener for TcpAndTlsListener {
 
         let mut connections: JoinSet<_> = JoinSet::new();
 
+        let tls_server_config = self.cert_manager.get_tls_server_config([]);
+
         loop {
             tokio::select! {
                 accept_tcp_res = accept_tcp_connection(&tcp_socket, &self.name) => {
@@ -55,7 +57,7 @@ impl Listener for TcpAndTlsListener {
                     };
 
                     if let Ok(Some(tls_stream)) =
-                        accept_tls_connection(tcp_stream, self.cert_manager.clone(), client_socket_addr, &self.name).await
+                        accept_tls_connection(tcp_stream, self.cert_manager.clone(), client_socket_addr, &self.name, tls_server_config.clone()).await
                     {
                         let service = self.service.clone();
                         connections.spawn(service.serve_connection(Box::new(tls_stream), client_socket_addr));

@@ -70,6 +70,8 @@ impl Listener for HttpsListener {
         // see HTTP listener to learn how graceful shutdown works for HTTP requests
         let graceful_shutdown = graceful::GracefulShutdown::new();
 
+        let tls_server_config = self.cert_manager.get_tls_server_config([b"h2".to_vec()]);
+
         loop {
             tokio::select! {
                 accept_tcp_res = accept_tcp_connection(&tcp_socket, &self.name) => {
@@ -83,6 +85,7 @@ impl Listener for HttpsListener {
                         self.cert_manager.clone(),
                         client_socket_addr,
                         &self.name,
+                        tls_server_config.clone(),
                     )
                     .await
                     {

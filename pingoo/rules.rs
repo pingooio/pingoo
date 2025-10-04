@@ -16,10 +16,10 @@ pub struct Rule {
 #[derive(Debug, Serialize)]
 pub struct RequestData<'a> {
     pub host: &'a str,
-    #[serde(serialize_with = "serde_utils::uri::serialize")]
+    #[serde(serialize_with = "serde_utils::http_uri::serialize")]
     pub url: &'a Uri,
     pub path: &'a str,
-    #[serde(serialize_with = "serde_utils::method::serialize")]
+    #[serde(serialize_with = "serde_utils::http_method::serialize")]
     pub method: &'a http::Method,
     pub user_agent: &'a str,
 }
