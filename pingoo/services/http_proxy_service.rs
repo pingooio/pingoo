@@ -117,9 +117,11 @@ impl HttpService for HttpProxyService {
 
         let upstream = upstreams.choose(&mut rng()).unwrap();
         let path_and_query = req.uri().path_and_query().map(|x| x.as_str()).unwrap_or("/");
+        let mut upstream_tls_version = http::Version::HTTP_11;
 
         let uri_str = if upstream.tls {
             // TODO: use upstream socketAddress and correct SNI
+            upstream_tls_version = http::Version::HTTP_2;
             format!("https://{}{path_and_query}", &upstream.hostname)
         } else {
             format!("http://{}{path_and_query}", &upstream.socket_address)
@@ -127,6 +129,7 @@ impl HttpService for HttpProxyService {
         let uri = uri_str.parse().unwrap();
 
         *req.uri_mut() = uri;
+        *req.version_mut() = upstream_tls_version;
 
         // here we forward the host from the client's request.
         // TODO: allow to configure if we forward the Host header or not (and thus use the host from the upstream).

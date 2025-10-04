@@ -10,8 +10,8 @@ use crate::{
     config::ListenerConfig,
     geoip::GeoipDB,
     listeners::{
-        GRACEFUL_SHUTDOWN_TIMEOUT, Listener, SupportedHttpProtocols, accept_tcp_connection, accept_tls_connection,
-        bind_tcp_socket, http_listener::serve_http_requests,
+        GRACEFUL_SHUTDOWN_TIMEOUT, Listener, accept_tcp_connection, accept_tls_connection, bind_tcp_socket,
+        http_listener::serve_http_requests,
     },
     rules::Rule,
     services::HttpService,
@@ -72,7 +72,7 @@ impl Listener for HttpsListener {
 
         let tls_server_config = self
             .tls_manager
-            .get_tls_server_config([TLS_ALPN_HTTP11.to_vec(), TLS_ALPN_HTTP2.to_vec()]);
+            .get_tls_server_config([TLS_ALPN_HTTP2.to_vec(), TLS_ALPN_HTTP11.to_vec()]);
 
         loop {
             tokio::select! {
@@ -101,7 +101,6 @@ impl Listener for HttpsListener {
                         client_socket_addr,
                         self.address,
                         self.name.clone(),
-                        SupportedHttpProtocols::Http11AndHttp2,
                         self.rules.clone(),
                         self.lists.clone(),
                         self.geoip.clone(),

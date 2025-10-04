@@ -1,10 +1,10 @@
 # Pingoo Changelog
 
-## v0.13.0 - Work in progress
+## v0.13.0 - 2025-10-04
 
 * **Breaking change**: the `/etc/pingoo/certificates` folder has moved to `/etc/pingoo/tls`.
 * Add support for automatic TLS (ACME protocol) 🎉
-* HTTPS listeners now also supports HTTP/1.1 alongside HTTP/2
+* HTTPS listeners now also support HTTP/1.1 alongside HTTP/2
 
 
 ## v0.12.0 - 2025-09-26
@@ -16,6 +16,7 @@
 
 - **Breaking change**: the default geoip database is now located at `/usr/share/pingoo/geoip.mmdb(.zst)` in the Docker image instead of `/etc/pingoo_data/geoip.mmdb(.zst)` to follow the Filesystem Hierarchy Standard.
 - Add support for `HS512`, `ES256` and `ES512` JSON Web Tokens.
+
 
 ## v0.10.0 - 2025-09-20
 

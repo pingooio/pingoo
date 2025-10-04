@@ -16,7 +16,7 @@ use crate::{
     captcha::{CAPTCHA_VERIFIED_COOKIE, CaptchaManager, generate_captcha_client_id},
     config::ListenerConfig,
     geoip::{self, GeoipDB, GeoipRecord},
-    listeners::{GRACEFUL_SHUTDOWN_TIMEOUT, Listener, SupportedHttpProtocols, accept_tcp_connection, bind_tcp_socket},
+    listeners::{GRACEFUL_SHUTDOWN_TIMEOUT, Listener, accept_tcp_connection, bind_tcp_socket},
     rules,
     services::{
         HttpService,
@@ -94,7 +94,6 @@ impl Listener for HttpListener {
                         client_socket_addr,
                         self.address,
                         self.name.clone(),
-                        SupportedHttpProtocols::Http11AndHttp2,
                         self.rules.clone(),
                         self.lists.clone(),
                         self.geoip.clone(),
@@ -124,7 +123,6 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
     client_socket_addr: SocketAddr,
     listener_address: SocketAddr,
     listener_name: Arc<String>,
-    supported_protocols: SupportedHttpProtocols,
     rules: Arc<Vec<rules::Rule>>,
     lists: Arc<bel::Value>,
     geoip: Option<Arc<GeoipDB>>,
@@ -274,16 +272,6 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
             return Ok::<_, crate::Error>(new_not_found_error());
         }
     });
-
-    let mut connection_handler = auto::Builder::new(TokioExecutor::new());
-    match supported_protocols {
-        SupportedHttpProtocols::Http2 => {
-            connection_handler.http2_only();
-        }
-        SupportedHttpProtocols::Http11AndHttp2 => {
-            connection_handler.http1();
-        }
-    };
 
     if let Err(err) = graceful_shutdown_watcher
         .watch(auto::Builder::new(TokioExecutor::new()).serve_connection_with_upgrades(tcp_stream, hyper_handler))

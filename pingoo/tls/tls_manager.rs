@@ -119,7 +119,7 @@ impl TlsManager {
             .with_no_client_auth()
             .with_cert_resolver(self.clone());
 
-        tls_server_config.alpn_protocols.extend(alpn_protocols);
+        tls_server_config.alpn_protocols = alpn_protocols.into_iter().collect();
 
         return Arc::new(tls_server_config);
     }

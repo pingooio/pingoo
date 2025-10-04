@@ -1,6 +1,6 @@
 [package]
 name = "pingoo"
-version = "0.13.0"
+version = "0.13.1"
 edition = "2024"
 
 [[bin]]
@@ -30,7 +30,7 @@ hickory-resolver = { workspace = true, features = ["https-aws-lc-rs", "webpki-ro
 http = { workspace = true }
 http-body-util = { workspace = true }
 hyper = { workspace = true, features = ["full"] }
-hyper-rustls = { workspace = true, features = ["http2"] }
+hyper-rustls = { workspace = true, features = ["http2", "http1"] }
 hyper-util = { workspace = true, features = ["full"] }
 indexmap = { workspace = true, features = ["serde"] }
 instant-acme = { workspace = true }
