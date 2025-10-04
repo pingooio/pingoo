@@ -72,8 +72,8 @@ impl Server {
 
         let rules = Arc::new(self.config.rules);
 
-        let cert_manager = Arc::new(TlsManager::new(&self.config.tls).await?);
-        cert_manager.clone().start_acme_in_background();
+        let tls_manager = Arc::new(TlsManager::new(&self.config.tls).await?);
+        tls_manager.start_acme_in_background();
 
         for listener_config in self.config.listeners {
             let listener_address = listener_config.address;
@@ -95,7 +95,7 @@ impl Server {
                         .clone();
                     Box::new(listeners::TcpAndTlsListener::new(
                         listener_config,
-                        cert_manager.clone(),
+                        tls_manager.clone(),
                         tcp_service_for_listener,
                     ))
                 }
@@ -122,7 +122,7 @@ impl Server {
                         .collect();
                     Box::new(listeners::HttpsListener::new(
                         listener_config,
-                        cert_manager.clone(),
+                        tls_manager.clone(),
                         http_services_for_listener,
                         rules.clone(),
                         lists.clone(),

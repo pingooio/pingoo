@@ -65,7 +65,7 @@ pub(super) struct AcmeChallenge {
 }
 
 impl TlsManager {
-    pub fn start_acme_in_background(self: Arc<Self>) {
+    pub fn start_acme_in_background(self: &Arc<Self>) {
         let acme_config = match &self.acme {
             Some(acme) => acme.clone(),
             None => return,
@@ -78,6 +78,7 @@ impl TlsManager {
 
         debug!("acme: starting ACME manager in background");
 
+        let tls_manager = self.clone();
         tokio::spawn(async move {
             loop {
                 let in_30_days = Utc::now() + Duration::from_secs(30 * 24 * 3600);
@@ -86,7 +87,7 @@ impl TlsManager {
                     .iter()
                     .filter(|&domain| {
                         // keep domains that are not yet in the store, or that expire in less than 30 days
-                        match self.certificates.get(domain) {
+                        match tls_manager.certificates.get(domain) {
                             Some(cert) if cert.metadata.not_after < in_30_days => true,
                             None => true,
                             _ => false,
@@ -97,7 +98,7 @@ impl TlsManager {
 
                 for domain in domains_to_order {
                     tokio::spawn({
-                        let tls_manager = self.clone();
+                        let tls_manager = tls_manager.clone();
                         let acme_config = acme_config.clone();
                         async move {
                             // time for listeners to start

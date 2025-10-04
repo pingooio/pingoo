@@ -15,17 +15,17 @@ pub struct TcpAndTlsListener {
     name: String,
     address: SocketAddr,
     socket: Option<tokio::net::TcpListener>,
-    cert_manager: Arc<TlsManager>,
+    tls_manager: Arc<TlsManager>,
     service: Arc<dyn TcpService>,
 }
 
 impl TcpAndTlsListener {
-    pub fn new(config: ListenerConfig, cert_manager: Arc<TlsManager>, service: Arc<dyn TcpService>) -> Self {
+    pub fn new(config: ListenerConfig, tls_manager: Arc<TlsManager>, service: Arc<dyn TcpService>) -> Self {
         return TcpAndTlsListener {
             name: config.name,
             address: config.address,
             socket: None,
-            cert_manager,
+            tls_manager,
             service,
         };
     }
@@ -46,7 +46,7 @@ impl Listener for TcpAndTlsListener {
 
         let mut connections: JoinSet<_> = JoinSet::new();
 
-        let tls_server_config = self.cert_manager.get_tls_server_config([]);
+        let tls_server_config = self.tls_manager.get_tls_server_config([]);
 
         loop {
             tokio::select! {
@@ -57,7 +57,7 @@ impl Listener for TcpAndTlsListener {
                     };
 
                     if let Ok(Some(tls_stream)) =
-                        accept_tls_connection(tcp_stream, self.cert_manager.clone(), client_socket_addr, &self.name, tls_server_config.clone()).await
+                        accept_tls_connection(tcp_stream, self.tls_manager.clone(), client_socket_addr, &self.name, tls_server_config.clone()).await
                     {
                         let service = self.service.clone();
                         connections.spawn(service.serve_connection(Box::new(tls_stream), client_socket_addr));

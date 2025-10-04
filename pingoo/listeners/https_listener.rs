@@ -23,7 +23,7 @@ pub struct HttpsListener {
     address: SocketAddr,
     socket: Option<tokio::net::TcpListener>,
     services: Arc<Vec<Arc<dyn HttpService>>>,
-    cert_manager: Arc<TlsManager>,
+    tls_manager: Arc<TlsManager>,
     rules: Arc<Vec<Rule>>,
     lists: Arc<bel::Value>,
     geoip: Option<Arc<GeoipDB>>,
@@ -33,7 +33,7 @@ pub struct HttpsListener {
 impl HttpsListener {
     pub fn new(
         config: ListenerConfig,
-        cert_manager: Arc<TlsManager>,
+        tls_manager: Arc<TlsManager>,
         services: Vec<Arc<dyn HttpService>>,
         rules: Arc<Vec<Rule>>,
         lists: Arc<bel::Value>,
@@ -45,7 +45,7 @@ impl HttpsListener {
             address: config.address,
             socket: None,
             services: Arc::new(services),
-            cert_manager,
+            tls_manager,
             rules,
             lists,
             geoip,
@@ -70,7 +70,7 @@ impl Listener for HttpsListener {
         // see HTTP listener to learn how graceful shutdown works for HTTP requests
         let graceful_shutdown = graceful::GracefulShutdown::new();
 
-        let tls_server_config = self.cert_manager.get_tls_server_config([b"h2".to_vec()]);
+        let tls_server_config = self.tls_manager.get_tls_server_config([b"h2".to_vec()]);
 
         loop {
             tokio::select! {
@@ -82,7 +82,7 @@ impl Listener for HttpsListener {
 
                     let tls_stream = match accept_tls_connection(
                         tcp_stream,
-                        self.cert_manager.clone(),
+                        self.tls_manager.clone(),
                         client_socket_addr,
                         &self.name,
                         tls_server_config.clone(),
