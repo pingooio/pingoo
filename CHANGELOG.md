@@ -3,7 +3,8 @@
 ## v0.13.0 - Work in progress
 
 * **Breaking change**: the `/etc/pingoo/certificates` folder has moved to `/etc/pingoo/tls`.
-* Add support for the ACME protocol for automatic TLS.
+* Add support for automatic TLS (ACME protocol) 🎉
+* HTTPS listeners now also supports HTTP/1.1 alongside HTTP/2
 
 
 ## v0.12.0 - 2025-09-26

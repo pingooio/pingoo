@@ -25,8 +25,6 @@ Valid protocols:
 - `tcp`
 - `tcp+tls`
 
-Pingoo only support HTTP/2 (and QUIC with HTTP/3 soon) on `https` listeners, on purpose. HTTP/2 was introduced in 2015 and is supported by virtually all browsers and client libraries: https://caniuse.com/http2. Only abandonned bots don't support HTTP/2. Clients are informed of this via the ALPN TLS field.
-
 ## Graceful shutdown
 
 When receiving a `Ctrl+C` / `terminate` signal, listeners initiate the graceful shutdown process. They first stop accepting new connections / requests and then wait up to 20 seconds (this may change in the future) for in-flight connections / request to finish.

@@ -24,6 +24,13 @@ use crate::{
     },
 };
 
+/// The ALPN protocol identifier for the ACME tls-alpn-01 challenge
+pub const TLS_ALPN_ACME: &[u8] = b"acme-tls/1";
+/// The ALPN protocol identifier for HTTP/2
+pub const TLS_ALPN_HTTP2: &[u8] = b"h2";
+/// The ALPN protocol identifier for HTTP/1.1
+pub const TLS_ALPN_HTTP11: &[u8] = b"http/1.1";
+
 const TLS_DIRECTORY_PERMISSIONS: u32 = 0o700;
 
 #[derive(Debug)]

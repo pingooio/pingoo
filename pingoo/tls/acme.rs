@@ -23,10 +23,9 @@ use crate::{
     config::DEFAULT_TLS_FOLDER,
     serde_utils,
     services::tcp_proxy_service::retry,
-    tls::{TlsManager, certificate::parse_certificate_and_private_key, tls_manager::write_cert_file},
+    tls::{TLS_ALPN_ACME, TlsManager, certificate::parse_certificate_and_private_key, tls_manager::write_cert_file},
 };
 
-pub const ACME_TLS_ALPN_NAME: &[u8] = b"acme-tls/1";
 pub const LETSENCRYPT_PRODUCTION_URL: &str = "https://acme-v02.api.letsencrypt.org/directory";
 // const LETSENCRYPT_STAGING_URL: &str = "https://acme-staging-v02.api.letsencrypt.org/directory";
 
@@ -72,11 +71,11 @@ impl TlsManager {
         };
 
         if acme_config.domains.is_empty() {
-            debug!("acme: domains are empty. Exiting ACME manager.");
+            debug!("tls: ACME domains are empty. Exiting ACME manager.");
             return;
         }
 
-        debug!("acme: starting ACME manager in background");
+        debug!("tls: starting ACME manager in background");
 
         let tls_manager = self.clone();
         tokio::spawn(async move {
@@ -106,7 +105,7 @@ impl TlsManager {
                             let tls_dir: PathBuf = DEFAULT_TLS_FOLDER.into();
                             let domain = &domain;
 
-                            debug!(domain, "acme: ordering certificate");
+                            debug!(domain, "tls: ordering ACME certificate");
 
                             let (private_key_pem, cert_chain_pem) =
                                 match order_certificate(&acme_config.account, &acme_config.challenges, &domain).await {
@@ -119,7 +118,7 @@ impl TlsManager {
                             let private_key_pem = private_key_pem.as_bytes();
                             let cert_chain_pem = cert_chain_pem.as_bytes();
 
-                            debug!(domain, "acme: order successfully completed");
+                            debug!(domain, "tls: ACME order successfully completed");
 
                             // parse certificate and add to cert store
                             let certificate = match parse_certificate_and_private_key(
@@ -156,10 +155,10 @@ impl TlsManager {
                             )
                             .await
                             {
-                                error!(domain, "acme: error saving TLS certificate: {err}");
+                                error!(domain, "tls: error saving ACME TLS certificate: {err}");
                                 return;
                             }
-                            info!(domain, "acme: TLS certificate successfully saved");
+                            info!(domain, "tls: ACME TLS certificate successfully saved");
                         }
                     });
                 }
@@ -174,7 +173,7 @@ impl TlsManager {
         let acme = match &self.acme {
             Some(acme) => acme.clone(),
             None => {
-                debug!("got tls-alpn-01 request but ACME config is empty");
+                debug!("tls: got tls-alpn-01 request but ACME config is empty");
                 return self.get_tls_server_config([]);
             }
         };
@@ -184,11 +183,12 @@ impl TlsManager {
                 let mut tls_config = ServerConfig::builder()
                     .with_no_client_auth()
                     .with_cert_resolver(Arc::new(SingleCertAndKey::from(Arc::new(certified_key))));
-                tls_config.alpn_protocols.push(ACME_TLS_ALPN_NAME.to_vec());
+                // make sure to specify the ACME tls-alpn-01 ALPN protocol
+                tls_config.alpn_protocols.push(TLS_ALPN_ACME.to_vec());
                 Arc::new(tls_config)
             }
             Err(err) => {
-                error!("acme: error getting tls-alpn-01 certificate: {err}");
+                error!("tls: error getting tls-alpn-01 certificate: {err}");
                 self.get_tls_server_config([])
             }
         }
@@ -202,22 +202,23 @@ async fn get_tls_alpn_01_cert(
     client_hello: &ClientHello<'_>,
 ) -> Result<CertifiedKey, Error> {
     let domain = client_hello.server_name().unwrap_or_default();
-    debug!(domain, "acme: got tls-alpn-01 request");
+    debug!(domain, "tls: got tls-alpn-01 request");
 
     let challenge = challenges_store
         .get(domain)
         .ok_or(Error::Unspecified(format!("ACME challenge not found for {domain}")))?;
-    debug!(domain, "acme: challenge found");
+    debug!(domain, "tls: ACME challenge found for tls-alpn-01 request");
 
+    // create the self-signed certificate with the ACME TLS-ALPN-01 extension
     let mut cert_params = rcgen::CertificateParams::new(vec![domain.to_string()])
         .map_err(|err| Error::Unspecified(format!("error creating certificate for {domain}: {err}")))?;
-
     cert_params.custom_extensions = vec![CustomExtension::new_acme_identifier(
         challenge.key_authorization.digest().as_ref(),
     )];
 
     let key_pair = KeyPair::generate_for(&PKCS_ECDSA_P256_SHA256)
         .map_err(|err| Error::Unspecified(format!("error generating keypair for {domain}: {err}")))?;
+
     let cert = cert_params
         .self_signed(&key_pair)
         .map_err(|err| Error::Unspecified(format!("error generating self-signed certificate for {domain}: {err}")))?;
@@ -226,6 +227,7 @@ async fn get_tls_alpn_01_cert(
         key_pair.serialize_der(),
     )))
     .map_err(|err| Error::Unspecified(format!("error creating SigningKey for {domain}: {err}")))?;
+
     let certified_key = CertifiedKey::new(vec![cert.der().clone()], signing_key);
 
     return Ok(certified_key);
@@ -270,7 +272,7 @@ async fn order_certificate(
         .await
         .map_err(|err| Error::Unspecified(format!("error setting ACME challenge as ready for {domain}: {err}")))?;
 
-    debug!(domain, "acme: challenge ready. Waiting for server verification");
+    debug!(domain, "tls: ACME challenge ready. Waiting for server verification");
 
     let status = order
         .poll_ready(&RetryPolicy::default())
@@ -364,7 +366,7 @@ pub(super) async fn load_or_create_acme_account(
     }
 }
 
-/// Returns `true` if the client_hello indicates a TLS-ALPN-01 challenge connection.
+/// Returns `true` if the client_hello indicates a TLS-ALPN-01 challenge connection, false otherwise.
 pub fn is_tls_alpn_challenge(client_hello: &ClientHello) -> bool {
-    client_hello.alpn().into_iter().flatten().eq([ACME_TLS_ALPN_NAME])
+    client_hello.alpn().into_iter().flatten().eq([TLS_ALPN_ACME])
 }

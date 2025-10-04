@@ -296,7 +296,7 @@ pub async fn load_and_validate() -> Result<Config, Error> {
                 && listener.address.port() == 443
         }) {
             warn!(
-                "config: at least one of your TLS listeners must listen on the port 443 for ACME certificates verification"
+                "config: at least one of your TLS listeners must listen on the port 443 for ACME certificates verification. Visit https://pingoo.io/docs/tls for more information."
             );
         }
     }

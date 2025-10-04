@@ -15,7 +15,7 @@ use crate::{
     },
     rules::Rule,
     services::HttpService,
-    tls::TlsManager,
+    tls::{TLS_ALPN_HTTP2, TLS_ALPN_HTTP11, TlsManager},
 };
 
 pub struct HttpsListener {
@@ -70,7 +70,9 @@ impl Listener for HttpsListener {
         // see HTTP listener to learn how graceful shutdown works for HTTP requests
         let graceful_shutdown = graceful::GracefulShutdown::new();
 
-        let tls_server_config = self.tls_manager.get_tls_server_config([b"h2".to_vec()]);
+        let tls_server_config = self
+            .tls_manager
+            .get_tls_server_config([TLS_ALPN_HTTP11.to_vec(), TLS_ALPN_HTTP2.to_vec()]);
 
         loop {
             tokio::select! {
@@ -93,18 +95,13 @@ impl Listener for HttpsListener {
                         _ => continue,
                     };
 
-                    // We currently only support HTTP/2 requests for TLS connections.
-                    // HTTP/2 was introduced in 2015 and is supported by virtually all browsers
-                    // and client libraries: https://caniuse.com/http2
-                    // Only unmaintained bots don't support HTTP/2
-                    // It's totally transparent as clients are informed of this via the ALPN TLS field.
                     tokio::spawn(serve_http_requests(
                         TokioIo::new(tls_stream),
                         self.services.clone(),
                         client_socket_addr,
                         self.address,
                         self.name.clone(),
-                        SupportedHttpProtocols::Http2,
+                        SupportedHttpProtocols::Http11AndHttp2,
                         self.rules.clone(),
                         self.lists.clone(),
                         self.geoip.clone(),
