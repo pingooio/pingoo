@@ -28,20 +28,20 @@ pub mod http_method {
     }
 }
 
-pub mod rustls_private_key_der {
-    use rustls::pki_types::PrivateKeyDer;
+pub mod rustls_private_pkcs_key_der {
+    use rustls::pki_types::PrivatePkcs8KeyDer;
     use serde::{Deserializer, Serializer, de};
     use std::fmt;
 
-    pub fn serialize<S: Serializer>(pruvate_key: &PrivateKeyDer<'_>, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(&base64::encode(pruvate_key.secret_der()))
+    pub fn serialize<S: Serializer>(pruvate_key: &PrivatePkcs8KeyDer<'_>, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&base64::encode(pruvate_key.secret_pkcs8_der()))
     }
 
-    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<PrivateKeyDer<'static>, D::Error> {
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<PrivatePkcs8KeyDer<'static>, D::Error> {
         struct Visitor;
 
         impl de::Visitor<'_> for Visitor {
-            type Value = PrivateKeyDer<'static>;
+            type Value = PrivatePkcs8KeyDer<'static>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a base64-encoded PKCS#8 private key")
@@ -49,7 +49,7 @@ pub mod rustls_private_key_der {
 
             fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
                 let bytes = base64::decode(v.as_bytes()).map_err(de::Error::custom)?;
-                PrivateKeyDer::try_from(bytes).map_err(de::Error::custom)
+                PrivatePkcs8KeyDer::try_from(bytes).map_err(de::Error::custom)
             }
         }
 

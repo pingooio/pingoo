@@ -7,7 +7,6 @@ url: "/docs/tls"
 
 # TLS
 
-
 TLS certificates are stored and read from the `/etc/pingoo/tls` folder.
 
 Private keys must have the `.key` extension and public certificates / certificate chains must have the `.pem` extension.
@@ -28,7 +27,7 @@ If no certificate is found for the requested domain, a default self-signed certi
 
 Pingoo supports the Automatic Certificate Management Environment (ACME) protocol in order to provide fully-automated certificate management.
 
-**pingoo.yml**
+Example: **pingoo.yml**
 ```yml
 listeners:
   https:
@@ -44,12 +43,16 @@ Pingoo currently doesn't support wildcard certificates when using ACME.
 Pingoo currently only supports the [tls-alpn-01](https://letsencrypt.org/docs/challenge-types/#tls-alpn-01) challenge. It means that one of your TLS listeners must be publicly accessible on the port `443`.
 
 
+Pingoo stores your ACME credentials in the `/etc/pingoo/tls/acme.json` file which is automatically managed. **Do not edit by hand.**
+
 
 ## TLS versions support
 
-By design, Pingoo only supports TLS 1.3 (and up in the future).
+By design, Pingoo only supports TLS version 1.3 (and up in the future).
 
-TLS 1.3 was introduced in 2018 and is supported by virtually all browsers and client libraries: https://caniuse.com/tls1-3. Only abandonned bots don't support TLS 1.3, therefore it makes no sense to reduce the security of everybody to support these bots.
+TLS 1.3 was introduced in 2018 and is a huge step in security compared to TLS 1.2.
+
+TLS 1.3 is supported by virtually all browsers and client libraries: https://caniuse.com/tls1-3. Only abandonned bots and vulnerable IoT devices part of a botnet don't support TLS 1.3, therefore it makes no sense to reduce the security of everyone to support these bots.
 
 
 ## Post-Quantum TLS
@@ -59,4 +62,4 @@ Pingoo supports post-quantum cryptography (also known as quantum-resistant crypt
 
 ## Security
 
-Pingoo uses AWS' [aws-lc-rs](https://github.com/aws/aws-lc-rs) cryptographic library under the hood, which is formally verified and provide an FIPS mode, to ensure the best security without making any compromise on performance.
+Pingoo uses AWS' [aws-lc-rs](https://github.com/aws/aws-lc-rs) cryptographic library under the hood, which is formally verified and provide an FIPS mode, to ensure the best security and performance.

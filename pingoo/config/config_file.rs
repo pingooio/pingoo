@@ -159,17 +159,30 @@ fn parse_listener_address(listener_address: &str) -> Result<ListenerAddressConfi
         Error::Config(format!("config: listeners.[{listener_address}]: path must be empty"));
     }
 
-    let host_and_port = listener_uri
-        .authority()
-        .map(|authority| format!("{}:{}", authority.host(), authority.port_u16().unwrap_or(80)))
-        .unwrap_or_default();
+    let authority = listener_uri.authority().ok_or(Error::Config(format!(
+        "listener address {} is not valid: authority is missing",
+        &listener_address
+    )))?;
 
-    let socket_address = host_and_port
-        .parse::<SocketAddr>()
+    let port = match (authority.port_u16(), protocol) {
+        (Some(port), _) => port,
+        (None, ListenerProtocol::Http) => 80,
+        (None, ListenerProtocol::Https) => 443,
+        _ => {
+            return Err(Error::Config(format!(
+                "listener address {} is not valid: port is missing",
+                &listener_address
+            )));
+        }
+    };
+
+    let ip_address: IpAddr = authority
+        .host()
+        .parse()
         .map_err(|err| Error::Config(format!("listener address {} is not valid: {err}", &listener_address)))?;
 
     return Ok(ListenerAddressConfigFile {
-        socket_address,
+        socket_address: SocketAddr::new(ip_address, port),
         protocol,
     });
 }

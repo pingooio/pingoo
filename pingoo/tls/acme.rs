@@ -45,8 +45,8 @@ pub struct AcmeConfigV1 {
 #[derive(Serialize, Deserialize)]
 pub struct AcmeAccount {
     pub id: String,
-    #[serde(with = "serde_utils::rustls_private_key_der")]
-    pub key: PrivateKeyDer<'static>,
+    #[serde(with = "serde_utils::rustls_private_pkcs_key_der")]
+    pub key: PrivatePkcs8KeyDer<'static>,
 }
 
 impl Debug for AcmeAccount {
@@ -318,11 +318,9 @@ pub(super) async fn load_or_create_acme_account(
         AcmeConfig::V1(mut acme_config_v1) => {
             // if there is an account for this directory_url, return it.
             if let Some(account) = acme_config_v1.accounts.get(&acme_directory_url) {
-                let account_key = PrivatePkcs8KeyDer::try_from(account.key.secret_der())
-                    .map_err(|err| Error::Unspecified(format!("error parsing ACME account key: {err}")))?;
                 let acme_account = instant_acme::Account::builder()
                     .map_err(|err| Error::Unspecified(format!("error creating ACME account builder: {err}")))?
-                    .from_parts(account.id.clone(), account_key, acme_directory_url)
+                    .from_parts(account.id.clone(), account.key.clone_key(), acme_directory_url)
                     .await
                     .map_err(|err| Error::Unspecified(format!("error loading ACME account: {err}")))?;
                 return Ok(acme_account);
@@ -341,9 +339,13 @@ pub(super) async fn load_or_create_acme_account(
                     )
                     .await
                     .map_err(|err| Error::Config(format!("error creating ACME account: {err}")))?;
+                let acme_account_key = match acme_credentials.key_pkcs8 {
+                    PrivateKeyDer::Pkcs8(private_pkcs8_key_der) => private_pkcs8_key_der,
+                    _ => return Err(Error::Unspecified("ACME account key is not PKCS#8 DER encoded".to_string())),
+                };
                 let account = AcmeAccount {
-                    id: acme_credentials.id.clone(),
-                    key: acme_credentials.key_pkcs8,
+                    id: acme_credentials.id,
+                    key: acme_account_key,
                 };
                 acme_config_v1.accounts.insert(acme_directory_url, account);
 
