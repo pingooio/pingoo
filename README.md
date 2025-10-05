@@ -21,7 +21,6 @@ Pingoo is a modern Load Balancer / API Gateway / Reverse Proxy that run on your 
 * Static sites
 * And much more
 
-> ⚠️ Pingoo is currently in beta, use with caution.
 
 ## Quickstart
 
