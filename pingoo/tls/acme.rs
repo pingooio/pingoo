@@ -141,11 +141,15 @@ impl TlsManager {
                                     async move {
                                         let mut private_key_path = tls_dir.clone();
                                         private_key_path.push(format!("{domain}.key"));
-                                        write_cert_file(private_key_path, private_key_pem).await?;
+                                        write_cert_file(&private_key_path, private_key_pem).await?;
 
                                         let mut cert_chain_path = tls_dir;
                                         cert_chain_path.push(format!("{domain}.pem"));
-                                        write_cert_file(cert_chain_path, cert_chain_pem).await?;
+                                        fs::write(&cert_chain_path, cert_chain_pem).await.map_err(|err| {
+                                            Error::Unspecified(format!(
+                                                "tls: error writing ACME certificate to {cert_chain_path:?}: {err}"
+                                            ))
+                                        })?;
 
                                         Ok(())
                                     }
@@ -342,13 +346,9 @@ pub(super) async fn load_or_create_acme_account(
                     )
                     .await
                     .map_err(|err| Error::Config(format!("error creating ACME account: {err}")))?;
-                let acme_account_key = match acme_credentials.key_pkcs8 {
-                    PrivateKeyDer::Pkcs8(private_pkcs8_key_der) => private_pkcs8_key_der,
-                    _ => return Err(Error::Unspecified("ACME account key is not PKCS#8 DER encoded".to_string())),
-                };
                 let account = AcmeAccount {
-                    id: acme_credentials.id,
-                    key: acme_account_key,
+                    id: acme_account.id().to_string(),
+                    key: acme_credentials.private_key().clone_key(),
                 };
                 acme_config_v1.accounts.insert(acme_directory_url, account);
 

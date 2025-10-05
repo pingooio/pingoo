@@ -1,6 +1,5 @@
 use std::{
     fmt::Debug,
-    os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -30,8 +29,6 @@ pub const TLS_ALPN_ACME: &[u8] = b"acme-tls/1";
 pub const TLS_ALPN_HTTP2: &[u8] = b"h2";
 /// The ALPN protocol identifier for HTTP/1.1
 pub const TLS_ALPN_HTTP11: &[u8] = b"http/1.1";
-
-const TLS_DIRECTORY_PERMISSIONS: u32 = 0o700;
 
 #[derive(Debug)]
 pub struct TlsManager {
@@ -66,20 +63,20 @@ impl TlsManager {
             .await
             .map_err(|err| Error::Config(format!("error creating TLS folder ({DEFAULT_TLS_FOLDER}): {err}")))?;
 
-        let tls_dir_metadata = fs::metadata(DEFAULT_TLS_FOLDER).await.map_err(|err| {
-            Error::Config(format!("error reading metadata for TLS folder ({DEFAULT_TLS_FOLDER}): {err}"))
-        })?;
-        let mut permissions = tls_dir_metadata.permissions();
-        if permissions.mode() != TLS_DIRECTORY_PERMISSIONS {
-            permissions.set_mode(0o700);
-            fs::set_permissions(DEFAULT_TLS_FOLDER, permissions)
-                .await
-                .map_err(|err| {
-                    Error::Config(format!(
-                        "error updating permissions for TLS folder ({DEFAULT_TLS_FOLDER}): {err}"
-                    ))
-                })?;
-        }
+        // let tls_dir_metadata = fs::metadata(DEFAULT_TLS_FOLDER).await.map_err(|err| {
+        //     Error::Config(format!("error reading metadata for TLS folder ({DEFAULT_TLS_FOLDER}): {err}"))
+        // })?;
+        // let mut permissions = tls_dir_metadata.permissions();
+        // if permissions.mode() != TLS_DIRECTORY_PERMISSIONS {
+        //     permissions.set_mode(0o700);
+        //     fs::set_permissions(DEFAULT_TLS_FOLDER, permissions)
+        //         .await
+        //         .map_err(|err| {
+        //             Error::Config(format!(
+        //                 "error updating permissions for TLS folder ({DEFAULT_TLS_FOLDER}): {err}"
+        //             ))
+        //         })?;
+        // }
 
         let (certificates, wildcard_certificates) = load_certificates(DEFAULT_TLS_FOLDER).await?;
 

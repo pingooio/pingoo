@@ -11,7 +11,7 @@ Open Source load balancers and reverse proxies are stuck in the past century wit
 
 Pingoo is a modern Load Balancer / API Gateway / Reverse Proxy that run on your own servers and already have (or will have soon) all the features you expect from managed services and even more. All of that with a huge boost in performance and security thanks to reduced latency and, of course, Rust ;)
 
-* Automatic and Post-Quantum HTTPs / TLS
+* Automatic and Post-Quantum HTTPS / TLS
 * Service Discovery (Docker, DNS...)
 * Web Application Firewall (WAF)
 * Easy compliance because the data never leaves your servers

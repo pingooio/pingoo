@@ -273,8 +273,8 @@ pub async fn load_and_validate() -> Result<Config, Error> {
 
         debug!(directory_url = acme_config.directory_url, domains = ?acme_config.domains, "config: ACME");
 
-        if find_duplicate(&acme_config.domains).is_some() {
-            return Err(Error::Config(format!("acme: duplicate domains found")));
+        if let Some(domain) = find_duplicate(&acme_config.domains) {
+            return Err(Error::Config(format!("acme: duplicate domain: {domain}")));
         }
 
         for domain in &acme_config.domains {

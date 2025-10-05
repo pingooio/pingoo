@@ -1150,8 +1150,8 @@ dependencies = [
 
 [[package]]
 name = "instant-acme"
-version = "0.8.2"
-source = "git+https://github.com/pingooio/instant-acme.git?branch=main#00e8b6ab23987a7c04d9e42e78cfb0e4f650e22d"
+version = "0.8.3"
+source = "git+https://github.com/djc/instant-acme?branch=main#da116f92e6a93ea47d9e7038cc045d07ed776ebc"
 dependencies = [
  "async-trait",
  "aws-lc-rs",
@@ -1576,7 +1576,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pingoo"
-version = "0.13.1"
+version = "0.13.2"
 dependencies = [
  "async-trait",
  "aws-lc-rs",

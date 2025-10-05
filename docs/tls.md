@@ -5,7 +5,7 @@ type: "page"
 url: "/docs/tls"
 ---
 
-# TLS
+# HTTPS / TLS
 
 TLS certificates are stored and read from the `/etc/pingoo/tls` folder.
 
@@ -26,6 +26,8 @@ If no certificate is found for the requested domain, a default self-signed certi
 ## Automatic HTTPS / TLS (ACME)
 
 Pingoo supports the Automatic Certificate Management Environment (ACME) protocol in order to provide fully-automated certificate management.
+
+By default, Pingoo uses [Let's Encrypt](https://letsencrypt.org) to order (free) certificates.
 
 Example: **pingoo.yml**
 ```yml

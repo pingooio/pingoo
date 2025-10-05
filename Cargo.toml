@@ -56,7 +56,7 @@ hyper = "1"
 hyper-rustls = "0.27"
 hyper-util = "0.1"
 indexmap = "2"
-instant-acme = { git = "https://github.com/pingooio/instant-acme.git", branch = "main" }
+instant-acme = { git = "https://github.com/djc/instant-acme", branch = "main" }
 mimalloc = "0.1"
 moka = "0.12"
 rand = "0.9"

@@ -23,7 +23,7 @@ navigation:
     - label: Listeners
       url: "/docs/listeners"
 
-    - label: TLS
+    - label: HTTPS / TLS
       url: "/docs/tls"
 
     - label: Services
