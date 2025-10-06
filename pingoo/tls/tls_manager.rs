@@ -220,14 +220,14 @@ async fn load_or_create_default_certificate(mut certs_dir: PathBuf) -> Result<Ce
             let (default_certificate, pem) = generate_self_signed_certificates(&["*"])?;
 
             // save certificate and private key
-            write_cert_file(&default_cert_path, pem.cert.as_bytes())
+            write_sensitive_file(&default_cert_path, pem.cert.as_bytes())
                 .await
                 .map_err(|err| {
                     Error::Tls(format!("error writing default TLS certificate to {default_cert_path:?}: {err}"))
                 })?;
 
             default_cert_path.set_extension("key");
-            write_cert_file(&default_cert_path, pem.key.as_bytes())
+            write_sensitive_file(&default_cert_path, pem.key.as_bytes())
                 .await
                 .map_err(|err| {
                     Error::Tls(format!(
@@ -252,7 +252,7 @@ async fn load_or_create_default_certificate(mut certs_dir: PathBuf) -> Result<Ce
     return Ok(default_cert);
 }
 
-pub async fn write_cert_file(path: impl AsRef<Path> + Debug, contents: impl AsRef<[u8]>) -> Result<(), Error> {
+pub async fn write_sensitive_file(path: impl AsRef<Path> + Debug, contents: impl AsRef<[u8]>) -> Result<(), Error> {
     let mut file = fs::OpenOptions::new()
         .create(true)
         .write(true)

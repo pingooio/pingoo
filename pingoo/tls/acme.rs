@@ -23,7 +23,9 @@ use crate::{
     config::DEFAULT_TLS_FOLDER,
     serde_utils,
     services::tcp_proxy_service::retry,
-    tls::{TLS_ALPN_ACME, TlsManager, certificate::parse_certificate_and_private_key, tls_manager::write_cert_file},
+    tls::{
+        TLS_ALPN_ACME, TlsManager, certificate::parse_certificate_and_private_key, tls_manager::write_sensitive_file,
+    },
 };
 
 pub const LETSENCRYPT_PRODUCTION_URL: &str = "https://acme-v02.api.letsencrypt.org/directory";
@@ -141,7 +143,7 @@ impl TlsManager {
                                     async move {
                                         let mut private_key_path = tls_dir.clone();
                                         private_key_path.push(format!("{domain}.key"));
-                                        write_cert_file(&private_key_path, private_key_pem).await?;
+                                        write_sensitive_file(&private_key_path, private_key_pem).await?;
 
                                         let mut cert_chain_path = tls_dir;
                                         cert_chain_path.push(format!("{domain}.pem"));
@@ -354,7 +356,7 @@ pub(super) async fn load_or_create_acme_account(
 
                 let acme_config_file_content = serde_json::to_vec_pretty(&AcmeConfig::V1(acme_config_v1))
                     .map_err(|err| Error::Config(format!("error serializing ACME configuration: {err}")))?;
-                write_cert_file(&acme_config_path, &acme_config_file_content)
+                write_sensitive_file(&acme_config_path, &acme_config_file_content)
                     .await
                     .map_err(|err| {
                         Error::Config(format!("error saving ACME configuration file to {acme_config_path:?}: {err}"))

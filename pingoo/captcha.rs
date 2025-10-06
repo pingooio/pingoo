@@ -17,6 +17,7 @@ use crate::{
     Error, config,
     crypto_utils::constant_time_compare,
     services::http_utils::{EmptyJsonBody, get_path, new_internal_error_response_500, new_not_found_error},
+    tls::write_sensitive_file,
 };
 
 pub const CAPTCHA_COOKIE: &str = "__pingoo_captcha";
@@ -579,7 +580,7 @@ async fn save_jwt_keys(keys: &[&jwt::Key], path: &str) -> Result<(), Error> {
 
     let jwks_json = serde_json::to_vec_pretty(&jwks)
         .map_err(|err| Error::Unspecified(format!("error converting JWKS to JSON: {err}")))?;
-    fs::write(path, &jwks_json)
+    write_sensitive_file(&path, &jwks_json)
         .await
         .map_err(|err| Error::Config(format!("error writing JWKS file {path}: {err}")))?;
 

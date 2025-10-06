@@ -89,9 +89,9 @@ FROM scratch
 
 # /etc/nsswitch.conf and resolv.conf may be used by some DNS resolvers
 # /etc/mime.types may be used to detect the MIME type of files
+# /etc/passwd \
+# /etc/group \
 COPY --from=builder_files \
-    /etc/passwd \
-    /etc/group \
     /etc/nsswitch.conf \
     /etc/mime.types \
     /etc/timezone \
@@ -101,19 +101,20 @@ COPY --from=builder_files \
 COPY --from=builder_files /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder_files /usr/share/zoneinfo /usr/share/zoneinfo
 
-COPY --from=builder_files --chown=pingoo:pingoo /etc/pingoo /etc/pingoo
-COPY --from=builder_files --chown=pingoo:pingoo /usr/share/pingoo /usr/share/pingoo
+# --chown=pingoo:pingoo
+COPY --from=builder_files /etc/pingoo /etc/pingoo
+COPY --from=builder_files /usr/share/pingoo /usr/share/pingoo
 COPY ./assets/www /var/www
 
 # Copy our build
 COPY --from=pingoo_build /pingoo/dist/pingoo /bin/pingoo
 
 # Use an unprivileged user
-USER pingoo:pingoo
+# USER pingoo:pingoo
 
 # The final working directory
 WORKDIR /home/pingoo
 
 ENTRYPOINT ["/bin/pingoo"]
 
-EXPOSE 8080
+EXPOSE 80 443

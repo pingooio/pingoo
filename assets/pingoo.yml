@@ -2,7 +2,7 @@
 
 listeners:
   http:
-    address: http://0.0.0.0:8080
+    address: http://0.0.0.0
 
 services:
   static_site:
