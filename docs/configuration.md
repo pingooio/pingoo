@@ -39,6 +39,12 @@ listeners:
     # - tcp_proxy for tcp / tcp+tls listeners
     services: ["api"]
 
+# (optional)
+tls:
+  # Automatic Certificate Management Environment (ACME)
+  acme:
+    domains: ["pingoo.io"]
+
 # services are the applications that listeners route traffic to
 services:
   api: # name of the service
