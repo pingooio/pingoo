@@ -1,0 +1,18 @@
+name: publish_docs
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish_docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
+
+      - name: publish
+        env:
+          MARKDOWN_NINJA_API_KEY: ${{ secrets.MARKDOWN_NINJA_API_KEY }}
+        working-directory: docs
+        run: docker run -i --rm -e MARKDOWN_NINJA_API_KEY -v `pwd`:/mdninja ghcr.io/bloom42/markdown-ninja publish

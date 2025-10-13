@@ -117,4 +117,4 @@ WORKDIR /home/pingoo
 
 ENTRYPOINT ["/bin/pingoo"]
 
-EXPOSE 80 443
+EXPOSE 80
