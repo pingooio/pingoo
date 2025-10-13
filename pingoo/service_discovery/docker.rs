@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 use tokio::{fs, sync::Mutex};
-use tracing::warn;
+use tracing::{info, warn};
 
 use crate::{
     Error,
@@ -27,7 +27,7 @@ impl DockerServiceDiscoverer {
         let docker_client = match fs::metadata(&config.docker.socket).await {
             Ok(_) => Ok(Some(Arc::new(Mutex::new(::docker::Client::new(Some(&config.docker.socket)))))),
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
-                warn!(
+                info!(
                     "docker socket ({}) not found. Docker service discovery disabled.",
                     config.docker.socket
                 );
