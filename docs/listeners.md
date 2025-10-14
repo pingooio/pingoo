@@ -36,5 +36,5 @@ Pingoo uses the `SO_REUSEPORT` option on sockets to enable zero-downtime upgrade
 If you are using docker you will need to use the `--network host` CLI argument to use zero-downtime upgrades with `SO_REUSEPORT`.
 
 ```bash
-$ docker run -d --network host ghcr.io/pingooio/pingoo
+$ docker run -d --network host pingooio/pingoo
 ```

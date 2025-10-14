@@ -7,7 +7,9 @@ url: "/docs/rules"
 
 # Rules
 
-Rules are are loaded from both the `/etc/pingoo/pingoo.yml` file and all the `.yml` file in the `/etc/pingoo/rules` folder.
+Rules are the main way to modify requests / responses and to configure services.
+
+Rules are loaded from both the `/etc/pingoo/pingoo.yml` file and all the `.yml` files in the `/etc/pingoo/rules` folder.
 
 For example in **pingoo.yml**:
 ```yml
@@ -18,7 +20,6 @@ rules:
     expression: http_request.path == "/blocked"
     actions:
       - action: block
-        parameters: {}
 ```
 
 Or, in **/etc/pingoo/rules/blocked.yml**:
@@ -27,7 +28,6 @@ block: # name of the rule
   expression: http_request.path == "/blocked"
   actions:
     - action: block
-      parameters: {}
 ```
 
 
@@ -110,7 +110,6 @@ rules:
     expression: lists["blocked_ips"].contains(client.ip)
     actions:
       - action: block
-        parameters: {}
 ```
 
 
@@ -118,3 +117,4 @@ Valid lists types:
 - `Int`
 - `String`
 - `Ip`
+

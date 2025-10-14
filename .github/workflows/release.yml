@@ -15,8 +15,8 @@ permissions:
   contents: read
 
 env:
-  DOCKER_IMAGE: ghcr.io/pingooio/pingoo
-  DOCKER_HUB_IMAGE: pingooio/pingoo
+  DOCKER_IMAGE_GITHUB: ghcr.io/pingooio/pingoo
+  DOCKER_IMAGE: pingooio/pingoo
 
 jobs:
   docker_build:
@@ -40,13 +40,13 @@ jobs:
       #   run: |
       #     sudo apt update && sudo apt upgrade -y
 
-      - name: Docker build image
+      - name: Docker build images
         run: |
           make docker_build
           docker image tag ${{ env.DOCKER_IMAGE }}:latest ${{ env.DOCKER_IMAGE }}:latest-${{ matrix.arch }}
-          docker image tag ${{ env.DOCKER_IMAGE }}:latest ${{ env.DOCKER_HUB_IMAGE }}:latest-${{ matrix.arch }}
+          docker image tag ${{ env.DOCKER_IMAGE }}:latest ${{ env.DOCKER_IMAGE_GITHUB }}:latest-${{ matrix.arch }}
           docker image tag ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION} ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION}-${{ matrix.arch }}
-          docker image tag ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION} ${{ env.DOCKER_HUB_IMAGE }}:${PINGOO_VERSION}-${{ matrix.arch }}
+          docker image tag ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION} ${{ env.DOCKER_IMAGE_GITHUB }}:${PINGOO_VERSION}-${{ matrix.arch }}
 
       - name: Docker images info
         run: |
@@ -57,12 +57,12 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
           echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
 
-      - name: Docker push image
+      - name: Docker push images
         run: |
           docker push ${{ env.DOCKER_IMAGE }}:latest-${{ matrix.arch }}
-          docker push ${{ env.DOCKER_HUB_IMAGE }}:latest-${{ matrix.arch }}
+          docker push ${{ env.DOCKER_IMAGE_GITHUB }}:latest-${{ matrix.arch }}
           docker push ${{ env.DOCKER_IMAGE }}:${PINGOO_VERSION}-${{ matrix.arch }}
-          docker push ${{ env.DOCKER_HUB_IMAGE }}:${PINGOO_VERSION}-${{ matrix.arch }}
+          docker push ${{ env.DOCKER_IMAGE_GITHUB }}:${PINGOO_VERSION}-${{ matrix.arch }}
 
 
   docker_push_manifest:
@@ -93,12 +93,12 @@ jobs:
           docker manifest push ${{ env.DOCKER_IMAGE }}:latest
 
 
-          docker manifest create ${{ env.DOCKER_HUB_IMAGE }}:${PINGOO_VERSION} \
-            --amend ${{ env.DOCKER_HUB_IMAGE }}:${PINGOO_VERSION}-amd64 \
-            --amend ${{ env.DOCKER_HUB_IMAGE }}:${PINGOO_VERSION}-arm64
-          docker manifest push ${{ env.DOCKER_HUB_IMAGE }}:${PINGOO_VERSION}
+          docker manifest create ${{ env.DOCKER_IMAGE_GITHUB }}:${PINGOO_VERSION} \
+            --amend ${{ env.DOCKER_IMAGE_GITHUB }}:${PINGOO_VERSION}-amd64 \
+            --amend ${{ env.DOCKER_IMAGE_GITHUB }}:${PINGOO_VERSION}-arm64
+          docker manifest push ${{ env.DOCKER_IMAGE_GITHUB }}:${PINGOO_VERSION}
 
-          docker manifest create ${{ env.DOCKER_HUB_IMAGE }}:latest \
-            --amend ${{ env.DOCKER_HUB_IMAGE }}:latest-amd64 \
-            --amend ${{ env.DOCKER_HUB_IMAGE }}:latest-arm64
-          docker manifest push ${{ env.DOCKER_HUB_IMAGE }}:latest
+          docker manifest create ${{ env.DOCKER_IMAGE_GITHUB }}:latest \
+            --amend ${{ env.DOCKER_IMAGE_GITHUB }}:latest-amd64 \
+            --amend ${{ env.DOCKER_IMAGE_GITHUB }}:latest-arm64
+          docker manifest push ${{ env.DOCKER_IMAGE_GITHUB }}:latest

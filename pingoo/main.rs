@@ -1,7 +1,7 @@
 use std::process::Stdio;
 
 use tokio::{process::Command, signal, sync::watch};
-use tracing::{debug, info};
+use tracing::{Level, debug, event, info, span};
 use tracing_subscriber::{EnvFilter, Layer, layer::SubscriberExt, util::SubscriberInitExt};
 
 mod config;
@@ -33,6 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
+                .json()
+                .flatten_event(true)
                 .with_writer(std::io::stderr)
                 .with_target(false)
                 .with_filter(EnvFilter::try_from_env("PINGOO_LOG").unwrap_or_else(|_| EnvFilter::new("info"))),

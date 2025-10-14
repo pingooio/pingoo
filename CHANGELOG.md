@@ -1,5 +1,12 @@
 # Pingoo Changelog
 
+## v0.14.0 - 2025-10-14
+
+* **minor breaking change**: logs are now formatted in JSON
+* Improved configuration: rules' actios no longer need the `parameters` field.
+* Docker hub image is now the recommended way to use Pingoo.
+* Pingoo no longer errors if no Geoip database is found and print a warning message instead
+
 ## v0.13.0 - 2025-10-04
 
 * **Breaking change**: the `/etc/pingoo/certificates` folder has moved to `/etc/pingoo/tls`.

@@ -41,10 +41,11 @@ pub struct CountryCode([u8; 2]);
 
 impl GeoipDB {
     /// try to load the geoip database from the default paths.
-    pub async fn new() -> Result<Self, Error> {
-        let (geoip_db_path, mut mmdb_content) = read_geoip_db()
-            .await?
-            .ok_or(Error::Unspecified("geoip database not found".to_string()))?;
+    pub async fn load() -> Result<Option<Self>, Error> {
+        let (geoip_db_path, mut mmdb_content) = match read_geoip_db().await? {
+            Some(path_and_content) => path_and_content,
+            None => return Ok(None),
+        };
 
         // if the geoip database has the .zst extension, then we consider it to be ZSTD-compressed
         if geoip_db_path.ends_with(".zst") {
@@ -63,10 +64,10 @@ impl GeoipDB {
 
         debug!("geoip database successfully loaded from {geoip_db_path}");
 
-        return Ok(GeoipDB {
+        return Ok(Some(GeoipDB {
             mmdb: mmdb_reader,
             cache,
-        });
+        }));
     }
 
     pub async fn lookup(&self, ip: IpAddr) -> Result<GeoipRecord, Error> {

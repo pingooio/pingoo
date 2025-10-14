@@ -10,7 +10,7 @@ use crate::{
     service_discovery::service_registry::ServiceRegistry,
     services::{HttpService, TcpService, http_utils::new_http_service, tcp_proxy_service::TcpProxyService},
 };
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::{
     config::{Config, ListenerProtocol},
@@ -37,7 +37,10 @@ impl Server {
             Arc::new(ServiceRegistry::new(&self.config.service_discovery, &self.config.services).await?);
         service_registry.clone().start_in_background();
 
-        let geoip_db = Some(Arc::new(GeoipDB::new().await?));
+        let geoip_db = GeoipDB::load().await?.map(|geoip_db| Arc::new(geoip_db));
+        if geoip_db.is_none() {
+            warn!("geoip database not found. GeoIP lookups are disabled.");
+        }
 
         let captcha_manager = Arc::new(CaptchaManager::new().await?);
 
@@ -132,7 +135,10 @@ impl Server {
                 }
             };
 
-            info!("Starting listener {listener_name} on {listener_protocol}://{listener_address}");
+            info!(
+                listener = listener_name,
+                "Starting listener {listener_name} on {listener_protocol}://{listener_address}"
+            );
 
             listener.bind()?;
             listeners_handles.spawn(listener.listen(shutdown_signal.clone()));

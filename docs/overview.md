@@ -75,7 +75,7 @@ services:
 
 **Dockerfile**
 ```dockerfile
-FROM ghcr.io/pingooio/pingoo:latest AS pingoo
+FROM pingooio/pingoo:latest AS pingoo
 FROM node:latest
 
 # setup pingoo

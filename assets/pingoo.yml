@@ -15,4 +15,3 @@ rules:
     expression: http_request.path.starts_with("/.env") || http_request.path.starts_with("/.git")
     actions:
       - action: block
-        parameters: {}

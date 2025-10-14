@@ -28,7 +28,7 @@ Pingoo is a modern Load Balancer / API Gateway / Reverse Proxy that run on your 
 # You have a static site in the www folder
 $ ls www
 index.html
-$ docker run --rm -ti -p 80:80 -v `pwd`/www:/var/wwww ghcr.io/pingooio/pingoo
+$ docker run --rm -ti -p 80:80 -v `pwd`/www:/var/wwww pingooio/pingoo
 # Pingoo is now listenning on http://0.0.0.0
 ```
 

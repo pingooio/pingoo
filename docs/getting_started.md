@@ -48,7 +48,6 @@ rules:
       ["XX"].contains(client.country)
     actions:
       - action: block
-        parameters: {}
 ```
 
 
@@ -56,5 +55,5 @@ We need to bind the docker socket so Pingoo can list the containers with the `pi
 
 ```bash
 $ docker run -d --label pingoo.service=api your_api_image:latest
-$ docker run -d --network host -v `pwd`/www:/var/www:ro -v `pwd`/pingoo:/etc/pingoo -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/pingooio/pingoo:latest
+$ docker run -d --network host -v `pwd`/www:/var/www:ro -v `pwd`/pingoo:/etc/pingoo -v /var/run/docker.sock:/var/run/docker.sock pingooio/pingoo:latest
 ```

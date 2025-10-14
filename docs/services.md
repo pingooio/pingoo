@@ -124,7 +124,7 @@ docker run -d --label pingoo.service=api --label pingoo.port=8080 my_api_image:l
 In order to enable docker service discovery Pingoo needs access to the docker socket. If you are running Pingoo inside a docker container you need to bind the docker socket:
 
 ```bash
-docker run -d -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/pingooio/pingoo
+docker run -d -v /var/run/docker.sock:/var/run/docker.sock pingooio/pingoo
 ```
 
 

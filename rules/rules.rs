@@ -28,7 +28,7 @@ pub type Context<'a> = bel::Context<'a>;
 // }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "action", content = "parameters", rename_all = "snake_case")]
+#[serde(tag = "action", rename_all = "snake_case")]
 pub enum Action {
     Block {},
     Captcha {},

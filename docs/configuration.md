@@ -68,7 +68,6 @@ rules:
       !http_request.user_agent.starts_with("Mozilla/") && !http_request.user_agent.contains("curl/")
     actions:
       - action: captcha
-        parameters: {}
 
 # (optional) Lists can be used in rule expressions to match against a large number of values
 lists:
