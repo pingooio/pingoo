@@ -39,7 +39,7 @@ See https://pingoo.io
 
 ## Social
 
-Follow us on [Bluesky @pingoo.io](https://bsky.app/profile/pingoo.io) to get the latest updates and technical deep dives 🦀⚡️
+Follow us on [Bluesky @pingoo.io](https://bsky.app/profile/pingoo.io) or on Mastodon [@pingooio@mastodon.social](https://mastodon.social/@pingooio) to get the latest updates and technical deep dives 🦀⚡️
 
 ## Contributing
 

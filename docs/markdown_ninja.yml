@@ -11,6 +11,8 @@ navigation:
       url: https://github.com/pingooio/pingoo
     - label: Bluesky
       url: https://bsky.app/profile/pingoo.io
+    - label: Mastodon
+      url: https://mastodon.social/@pingooio
 
   secondary:
     - label: Overview
