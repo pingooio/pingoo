@@ -39,8 +39,7 @@ See https://pingoo.io
 
 ## Updates
 
-[Click Here](https://kerkour.com/blog) to visit the blog and [subscribe](https://kerkour.com/subscribe) by RSS or email to get weekly / monthly updates. No spam ever, only technical deep dives.
-
+Follow us on [Bluesky @pingoo.io](https://bsky.app/profile/pingoo.io) to get the latest updates and latest technical deep dives 🦀⚡️
 
 ## Contributing
 

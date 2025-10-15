@@ -8,7 +8,9 @@ pages: ["./"]
 navigation:
   primary:
     - label: GitHub
-      url: "https://github.com/pingooio/pingoo"
+      url: https://github.com/pingooio/pingoo
+    - label: Bluesky
+      url: https://bsky.app/profile/pingoo.io
 
   secondary:
     - label: Overview
