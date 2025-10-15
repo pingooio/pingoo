@@ -37,7 +37,7 @@ $ docker run --rm -ti -p 80:80 -v `pwd`/www:/var/wwww pingooio/pingoo
 See https://pingoo.io
 
 
-## Updates
+## Social
 
 Follow us on [Bluesky @pingoo.io](https://bsky.app/profile/pingoo.io) to get the latest updates and technical deep dives 🦀⚡️
 

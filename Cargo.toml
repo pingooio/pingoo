@@ -1,3 +1,12 @@
+[package]
+name = "pingoo"
+version = "0.14.1"
+edition = "2024"
+
+[[bin]]
+name = "pingoo"
+path = "pingoo/main.rs"
+
 # See the link below for more information and the default profiles
 # https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.release]
@@ -13,12 +22,67 @@ codegen-units = 1
 debug = 0
 strip = "debuginfo"
 
+[dependencies]
+docker = { path = "./docker" }
+jwt = { path = "./jwt" }
+captcha = { path = "./captcha" }
+rules = { path = "./rules" }
+
+async-trait = { workspace = true }
+aws-lc-rs = { workspace = true }
+base64 = { workspace = true }
+bel = { workspace = true }
+bytes = { workspace = true }
+chrono = { workspace = true, features = ["clock", "oldtime", "serde", "std" ] }
+cookie = { workspace = true, features = ["percent-encode"] }
+csv = { workspace = true }
+dashmap = { workspace = true }
+futures = { workspace = true }
+heapless = { workspace = true, features = ["serde"] }
+hex = { workspace = true }
+hickory-resolver = { workspace = true, features = ["https-aws-lc-rs", "webpki-roots", "tls-aws-lc-rs"] }
+http = { workspace = true }
+http-body-util = { workspace = true }
+hyper = { workspace = true, features = ["full"] }
+hyper-rustls = { workspace = true, features = ["http2", "http1"] }
+hyper-util = { workspace = true, features = ["full"] }
+indexmap = { workspace = true, features = ["serde"] }
+instant-acme = { workspace = true }
+ipnetwork = { workspace = true, features = ["serde"] }
+maxminddb = { workspace = true }
+mimalloc = { workspace = true }
+mime_guess = { workspace = true }
+moka = { workspace = true, features = ["future"] }
+rand = { workspace = true }
+rcgen = { workspace = true, default-features = false, features = ["crypto", "aws_lc_rs", "pem"]}
+# disable TLS 1.2 support
+rustls = { workspace = true, default-features = false, features = ["aws_lc_rs", "logging", "prefer-post-quantum", "std"] }
+rustls-pemfile = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+socket2 = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+# disable TLS 1.2 support
+tokio-rustls = { workspace = true, default-features = false, features = ["aws_lc_rs", "logging"] }
+tokio-util = { workspace = true, features = ["full"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, default-features = false, features =  ["smallvec", "fmt", "tracing-log", "std", "env-filter", "json"] }
+url = { workspace = true }
+uuid = { workspace = true }
+wildcard = { workspace = true }
+x509-parser = { workspace = true }
+zeroize = { workspace = true, features = ["simd", "derive"] }
+zstd = { workspace = true }
+
+
 
 [workspace]
 resolver = "2"
 
 members = [
-    "pingoo",
+    ".",
     "captcha",
     "docker",
     "jwt",
