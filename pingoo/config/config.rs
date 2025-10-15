@@ -25,6 +25,9 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const DEFAULT_CONFIG_FILE: &str = "/etc/pingoo/pingoo.yml";
 pub const DEFAULT_CONFIG_FOLDER: &str = "/etc/pingoo";
 pub const DEFAULT_TLS_FOLDER: &str = "/etc/pingoo/tls";
+/// Locations where geoip database are looked for.
+/// We use the /usr/share/pingoo folder so people using docker can bind the /etc/pingoo folder
+/// and still use the provided Geoip database.
 pub const GEOIP_DATABASE_PATHS: &[&str] = &[
     "/etc/pingoo/geoip.mmdb",
     "/etc/pingoo/geoip.mmdb.zst",

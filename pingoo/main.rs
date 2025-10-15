@@ -1,7 +1,7 @@
 use std::process::Stdio;
 
 use tokio::{process::Command, signal, sync::watch};
-use tracing::{Level, debug, event, info, span};
+use tracing::{debug, info};
 use tracing_subscriber::{EnvFilter, Layer, layer::SubscriberExt, util::SubscriberInitExt};
 
 mod config;

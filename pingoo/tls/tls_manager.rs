@@ -1,17 +1,12 @@
-use std::{
-    fmt::Debug,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{fmt::Debug, path::PathBuf, sync::Arc};
 
 use dashmap::DashMap;
-use futures::TryFutureExt;
 use rustls::{
     ServerConfig,
     crypto::CryptoProvider,
     server::{ClientHello, ResolvesServerCert},
 };
-use tokio::{fs, io::AsyncWriteExt};
+use tokio::fs;
 use tracing::warn;
 
 use crate::{
@@ -220,20 +215,18 @@ async fn load_or_create_default_certificate(mut certs_dir: PathBuf) -> Result<Ce
             let (default_certificate, pem) = generate_self_signed_certificates(&["*"])?;
 
             // save certificate and private key
-            write_sensitive_file(&default_cert_path, pem.cert.as_bytes())
+            fs::write(&default_cert_path, pem.cert.as_bytes())
                 .await
                 .map_err(|err| {
                     Error::Tls(format!("error writing default TLS certificate to {default_cert_path:?}: {err}"))
                 })?;
 
             default_cert_path.set_extension("key");
-            write_sensitive_file(&default_cert_path, pem.key.as_bytes())
-                .await
-                .map_err(|err| {
-                    Error::Tls(format!(
-                        "error writing private key for default TLS certificate to {default_cert_path:?}: {err}"
-                    ))
-                })?;
+            fs::write(&default_cert_path, pem.key.as_bytes()).await.map_err(|err| {
+                Error::Tls(format!(
+                    "error writing private key for default TLS certificate to {default_cert_path:?}: {err}"
+                ))
+            })?;
 
             Ok(default_certificate)
         }
@@ -252,23 +245,23 @@ async fn load_or_create_default_certificate(mut certs_dir: PathBuf) -> Result<Ce
     return Ok(default_cert);
 }
 
-pub async fn write_sensitive_file(path: impl AsRef<Path> + Debug, contents: impl AsRef<[u8]>) -> Result<(), Error> {
-    let mut file = fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .mode(0o600)
-        .truncate(true)
-        .open(&path)
-        .map_err(|err| Error::Unspecified(err.to_string()))
-        .await?;
+// pub async fn write_sensitive_file(path: impl AsRef<Path> + Debug, contents: impl AsRef<[u8]>) -> Result<(), Error> {
+//     let mut file = fs::OpenOptions::new()
+//         .create(true)
+//         .write(true)
+//         .mode(0o600)
+//         .truncate(true)
+//         .open(&path)
+//         .map_err(|err| Error::Unspecified(err.to_string()))
+//         .await?;
 
-    file.write_all(contents.as_ref())
-        .await
-        .map_err(|err| Error::Unspecified(format!("error when writing data to file: {err}")))?;
+//     file.write_all(contents.as_ref())
+//         .await
+//         .map_err(|err| Error::Unspecified(format!("error when writing data to file: {err}")))?;
 
-    file.flush()
-        .await
-        .map_err(|err| Error::Unspecified(format!("error when flushing data to file: {err}")))?;
+//     file.flush()
+//         .await
+//         .map_err(|err| Error::Unspecified(format!("error when flushing data to file: {err}")))?;
 
-    return Ok(());
-}
+//     return Ok(());
+// }
