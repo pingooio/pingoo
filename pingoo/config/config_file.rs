@@ -60,8 +60,18 @@ pub struct ServiceConfigFile {
     pub r#static: Option<ServiceConfigFileStatic>,
     #[serde(default)]
     pub tcp_proxy: Option<Vec<String>>,
+    #[serde(default)]
+    pub auth: Option<AuthConfigFile>,
     // #[serde(default)]
     // pub rules: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct AuthConfigFile {
+    pub provider: crate::config::AuthProvider,
+    pub client_id: String,
+    pub client_secret: String,
+    pub redirect_url: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -264,12 +274,20 @@ pub fn parse_service(service_name: String, service: ServiceConfigFile) -> Result
         .unwrap_or(Ok(None))
         .map_err(|err: rules::Error| Error::Config(format!("error parsing route for service {service_name}: {err}")))?;
 
+    let auth = service.auth.map(|auth_config| crate::config::AuthConfig {
+        provider: auth_config.provider,
+        client_id: auth_config.client_id,
+        client_secret: auth_config.client_secret,
+        redirect_url: auth_config.redirect_url,
+    });
+
     return Ok(ServiceConfig {
         name: service_name,
         route,
         http_proxy,
         r#static: r#static,
         tcp_proxy,
+        auth,
     });
 }
 

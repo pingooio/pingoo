@@ -49,7 +49,7 @@ pub fn compile_expression(expression: &str) -> Result<CompiledExpression, Error>
         Err(_) => return Err(Error::ExpressionIsNotValid("invalid input".to_string())),
     };
 
-    return Ok(program);
+    Ok(program)
 }
 
 pub fn validate_expression(expression: &str) -> Result<(), Error> {
@@ -73,5 +73,5 @@ pub fn validate_expression(expression: &str) -> Result<(), Error> {
     // validate variables
     // TODO
 
-    return Ok(());
+    Ok(())
 }

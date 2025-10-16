@@ -29,7 +29,7 @@ RUN make build
 FROM rust:alpine AS pingoo_build
 
 RUN apk add --no-cache --no-progress \
-    git make bash curl wget zip gnupg coreutils gcc g++  zstd binutils ca-certificates upx \
+    git make bash curl wget zip gnupg coreutils gcc g++ zstd binutils ca-certificates upx \
     lld mold musl musl-dev cmake clang clang-dev openssl openssl-dev zstd
 RUN update-ca-certificates
 
@@ -117,4 +117,4 @@ WORKDIR /home/pingoo
 
 ENTRYPOINT ["/bin/pingoo"]
 
-EXPOSE 80
+EXPOSE 80 443

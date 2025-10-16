@@ -7,6 +7,7 @@ use tracing_subscriber::{EnvFilter, Layer, layer::SubscriberExt, util::Subscribe
 mod config;
 mod server;
 
+mod auth;
 mod captcha;
 mod crypto_utils;
 mod error;
