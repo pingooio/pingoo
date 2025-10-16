@@ -32,6 +32,7 @@ pub trait TcpService: Send + Sync {
 
 #[async_trait::async_trait]
 pub trait HttpService: Send + Sync {
+    fn name(&self) -> String;
     fn match_request(&self, ctx: &rules::Context) -> bool;
     async fn handle_http_request(&self, req: Request<hyper::body::Incoming>) -> Response<BoxBody<Bytes, hyper::Error>>;
 }

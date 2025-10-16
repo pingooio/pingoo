@@ -152,6 +152,10 @@ pub enum Algorithm {
 
     /// ECDSA using P-521 and SHA-512
     ES512,
+
+    /// RSA PKCS#1 v1.5 signature with SHA-256
+    /// Commonly used by OAuth providers (Google, Microsoft, GitHub, etc.)
+    RS256,
 }
 
 #[derive(Debug, Clone)]
@@ -165,6 +169,9 @@ impl Algorithm {
         match self {
             Algorithm::HS512 | Algorithm::EdDSA | Algorithm::ES256 => 64,
             Algorithm::ES512 => 132,
+            // RS256 signature size varies based on key size (256 bytes for 2048-bit keys)
+            // We use max size for 4096-bit keys
+            Algorithm::RS256 => 512,
         }
     }
 }

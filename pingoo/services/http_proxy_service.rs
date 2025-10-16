@@ -81,6 +81,10 @@ impl HttpProxyService {
 
 #[async_trait::async_trait]
 impl HttpService for HttpProxyService {
+    fn name(&self) -> String {
+        self.name.to_string()
+    }
+
     fn match_request(&self, ctx: &rules::Context) -> bool {
         match &self.route {
             None => true,

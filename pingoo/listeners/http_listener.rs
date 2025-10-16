@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, str::FromStr, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, str::FromStr, sync::Arc};
 
 use ::rules::Action;
 use cookie::Cookie;
@@ -13,6 +13,7 @@ use tracing::{debug, error};
 
 use crate::{
     Error,
+    auth::OAuthManager,
     captcha::{CAPTCHA_VERIFIED_COOKIE, CaptchaManager, generate_captcha_client_id},
     config::ListenerConfig,
     geoip::{self, GeoipDB, GeoipRecord},
@@ -36,6 +37,7 @@ pub struct HttpListener {
     lists: Arc<bel::Value>,
     geoip: Option<Arc<GeoipDB>>,
     captcha_manager: Arc<CaptchaManager>,
+    auth_managers: Arc<HashMap<String, Arc<OAuthManager>>>,
 }
 
 impl HttpListener {
@@ -46,6 +48,7 @@ impl HttpListener {
         lists: Arc<bel::Value>,
         geoip: Option<Arc<GeoipDB>>,
         captcha_manager: Arc<CaptchaManager>,
+        auth_managers: Arc<HashMap<String, Arc<OAuthManager>>>,
     ) -> Self {
         return HttpListener {
             name: Arc::new(config.name),
@@ -56,6 +59,7 @@ impl HttpListener {
             lists,
             geoip,
             captcha_manager,
+            auth_managers,
         };
     }
 }
@@ -98,6 +102,7 @@ impl Listener for HttpListener {
                         self.lists.clone(),
                         self.geoip.clone(),
                         self.captcha_manager.clone(),
+                        self.auth_managers.clone(),
                         false,
                         graceful_shutdown.watcher(),
                     ));
@@ -127,6 +132,7 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
     lists: Arc<bel::Value>,
     geoip: Option<Arc<GeoipDB>>,
     captcha_manager: Arc<CaptchaManager>,
+    auth_managers: Arc<HashMap<String, Arc<OAuthManager>>>,
     use_tls: bool,
     graceful_shutdown_watcher: graceful::Watcher,
 ) {
@@ -136,6 +142,7 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
         let lists = lists.clone();
         let geoip = geoip.clone();
         let captcha_manager = captcha_manager.clone();
+        let auth_managers = auth_managers.clone();
         async move {
             let host = get_host(&req);
             let path = get_path(&req).to_string();
@@ -143,15 +150,12 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
             let geoip_record = match geoip.as_ref() {
                 Some(geoip_db) => {
                     let client_ip = client_socket_addr.ip();
-                    match geoip_db.lookup(client_ip).await {
-                        Ok(geoip_record) => geoip_record,
-                        Err(err) => {
-                            if !matches!(err, geoip::Error::AddressNotFound(_)) {
-                                error!("geoip: error looking up ip {client_ip}: {err}")
-                            }
-                            GeoipRecord::default()
+                    geoip_db.lookup(client_ip).await.unwrap_or_else(|err| {
+                        if !matches!(err, geoip::Error::AddressNotFound(_)) {
+                            error!("geoip: error looking up ip {client_ip}: {err}")
                         }
-                    }
+                        GeoipRecord::default()
+                    })
                 }
                 None => GeoipRecord::default(),
             };
@@ -221,12 +225,12 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
             // true if the captcha verified cookie is present and valid
             let mut captcha_verified = false;
 
-            if let Some(chalenge_verified_cookie) = parsed_cookies
+            if let Some(challenge_verified_cookie) = parsed_cookies
                 .iter()
                 .find(|cookie| cookie.name() == CAPTCHA_VERIFIED_COOKIE)
             {
                 if captcha_manager
-                    .validate_captcha_verified_cookie(chalenge_verified_cookie.value(), &client_id)
+                    .validate_captcha_verified_cookie(challenge_verified_cookie.value(), &client_id)
                     .is_ok()
                 {
                     captcha_verified = true;
@@ -265,6 +269,33 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
 
             for service in services.as_ref() {
                 if service.match_request(&rules_ctx) {
+                    let service_name = service.name();
+
+                    if let Some(oauth_manager) = auth_managers.get(&service_name) {
+                        if path == "/auth/callback" {
+                            let callback_result =
+                                crate::auth::AuthMiddleware::handle_oauth_callback(service_name, oauth_manager, &req)
+                                    .await;
+                            if let Some(res) = callback_result {
+                                return Ok(res);
+                            } else {
+                                tracing::error!("Failure in callback: {:?}", callback_result);
+                            }
+                        }
+
+                        if path == "/auth/logout" {
+                            return Ok(crate::auth::AuthMiddleware::handle_logout(&auth_managers, &req));
+                        }
+
+                        let session_manager = oauth_manager.session_manager();
+
+                        if let Err(auth_response) =
+                            crate::auth::AuthMiddleware::handle_service_auth(session_manager, oauth_manager, &mut req)
+                        {
+                            return Ok(auth_response);
+                        }
+                    }
+
                     return Ok(service.handle_http_request(req).await);
                 }
             }

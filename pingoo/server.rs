@@ -18,6 +18,7 @@ use crate::{
     listeners::{self},
     tls::TlsManager,
 };
+use crate::auth::AuthManagerBuilder;
 
 /// The Server binds the listeners.
 #[derive(Debug)]
@@ -59,6 +60,8 @@ impl Server {
                 )
             })
             .collect();
+
+        let auth_managers = Arc::new(AuthManagerBuilder::new(self.config.services.clone()).build()?);
 
         let http_services: HashMap<String, Arc<dyn HttpService>> = self
             .config
@@ -115,6 +118,7 @@ impl Server {
                         lists.clone(),
                         geoip_db.clone(),
                         captcha_manager.clone(),
+                        auth_managers.clone(),
                     ))
                 }
                 ListenerProtocol::Https => {
@@ -131,6 +135,7 @@ impl Server {
                         lists.clone(),
                         geoip_db.clone(),
                         captcha_manager.clone(),
+                        auth_managers.clone()
                     ))
                 }
             };

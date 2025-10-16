@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
 use hyper_util::{rt::TokioIo, server::graceful};
 use tokio::sync::watch;
@@ -6,6 +6,7 @@ use tracing::debug;
 
 use crate::{
     Error,
+    auth::OAuthManager,
     captcha::CaptchaManager,
     config::ListenerConfig,
     geoip::GeoipDB,
@@ -28,6 +29,7 @@ pub struct HttpsListener {
     lists: Arc<bel::Value>,
     geoip: Option<Arc<GeoipDB>>,
     captcha_manager: Arc<CaptchaManager>,
+    auth_managers: Arc<HashMap<String, Arc<OAuthManager>>>,
 }
 
 impl HttpsListener {
@@ -39,6 +41,7 @@ impl HttpsListener {
         lists: Arc<bel::Value>,
         geoip: Option<Arc<GeoipDB>>,
         captcha_manager: Arc<CaptchaManager>,
+        auth_managers: Arc<HashMap<String, Arc<OAuthManager>>>,
     ) -> Self {
         return HttpsListener {
             name: Arc::new(config.name),
@@ -50,6 +53,7 @@ impl HttpsListener {
             lists,
             geoip,
             captcha_manager,
+            auth_managers,
         };
     }
 }
@@ -105,6 +109,7 @@ impl Listener for HttpsListener {
                         self.lists.clone(),
                         self.geoip.clone(),
                         self.captcha_manager.clone(),
+                        self.auth_managers.clone(),
                         true,
                         graceful_shutdown.watcher(),
                     ));
