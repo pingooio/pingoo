@@ -1,6 +1,6 @@
 DIST_DIR = dist
 COMMIT := $(shell git rev-parse HEAD)
-DOCKER_IMAGE = docker.io/pingooio/pingoo
+DOCKER_IMAGE = pingooio/pingoo
 VERSION := $(shell cat Cargo.toml | grep '^version =' | cut -d'"' -f2)
 
 ####################################################################################################

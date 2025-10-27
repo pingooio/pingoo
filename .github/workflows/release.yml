@@ -16,7 +16,7 @@ permissions:
 
 env:
   DOCKER_IMAGE_GITHUB: ghcr.io/pingooio/pingoo
-  DOCKER_IMAGE: docker.io/pingooio/pingoo
+  DOCKER_IMAGE: pingooio/pingoo
 
 jobs:
   docker_build:
@@ -34,7 +34,7 @@ jobs:
       - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
 
       - name: Read version from Cargo.toml and export to env
-        run: echo "PINGOO_VERSION=$(cat pingoo/Cargo.toml | grep '^version =' | cut -d'"' -f2)" >> "$GITHUB_ENV"
+        run: echo "PINGOO_VERSION=$(cat Cargo.toml | grep '^version =' | cut -d'"' -f2)" >> "$GITHUB_ENV"
 
       # - name: Update packages
       #   run: |
