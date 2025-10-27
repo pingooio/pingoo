@@ -73,7 +73,7 @@ jobs:
       - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493 # v5.0.0
 
       - name: Read version from Cargo.toml and export to env
-        run: echo "PINGOO_VERSION=$(cat pingoo/Cargo.toml | grep '^version =' | cut -d'"' -f2)" >> "$GITHUB_ENV"
+        run: echo "PINGOO_VERSION=$(cat Cargo.toml | grep '^version =' | cut -d'"' -f2)" >> "$GITHUB_ENV"
 
       - name: Login to container registries
         run: |
