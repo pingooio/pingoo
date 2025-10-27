@@ -35,11 +35,11 @@ release:
 	date
 	git checkout main
 	git push
+	git tag v$(VERSION)
+	git push --tags
 	git checkout release
 	git merge main
 	git push
-	git tag v$(VERSION)
-	git push --tags
 	git checkout main
 
 
