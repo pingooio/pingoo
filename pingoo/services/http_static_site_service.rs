@@ -262,12 +262,12 @@ async fn try_metadata(path: &PathBuf) -> Result<Metadata, Response<BoxBody<Bytes
         Ok(metadata) if metadata.is_dir() => {
             debug!("error getting {path:?}: is a directory");
             Err(new_not_found_error())
-        },
+        }
         Ok(metadata) => Ok(metadata),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             debug!("error getting {path:?}: not found");
             Err(new_not_found_error())
-        },
+        }
         Err(err) => {
             error!("error getting metadata for static file: {path:?}: {err}");
             Err(new_internal_error_response_500())

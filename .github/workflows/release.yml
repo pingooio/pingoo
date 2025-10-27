@@ -16,7 +16,7 @@ permissions:
 
 env:
   DOCKER_IMAGE_GITHUB: ghcr.io/pingooio/pingoo
-  DOCKER_IMAGE: pingooio/pingoo
+  DOCKER_IMAGE: docker.io/pingooio/pingoo
 
 jobs:
   docker_build:

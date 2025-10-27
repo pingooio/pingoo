@@ -22,6 +22,7 @@ mod tls;
 pub use error::Error;
 
 use crate::{listeners::GRACEFUL_SHUTDOWN_TIMEOUT, server::Server};
+use config::DEFAULT_CONFIG_FILE;
 
 // We don't use mimalloc in debug builds to speedup compilation
 // #[cfg(not(debug_assertions))]
@@ -47,6 +48,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map_err(|err| Error::Config(format!("error setting up rustls crypto provider: {err:?}")))?;
 
     let config = config::load_and_validate().await?;
+    info!(
+        services = config.services.len(),
+        listeners = config.listeners.len(),
+        "configuration successfully loaded from {DEFAULT_CONFIG_FILE}"
+    );
 
     let (shutdown_tx, shutdown_rx) = watch::channel(());
     tokio::spawn(shutdown_signal(shutdown_tx));

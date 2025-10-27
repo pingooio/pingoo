@@ -10,7 +10,7 @@ use http::StatusCode;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 use crate::{
     Error,
@@ -199,8 +199,6 @@ pub async fn load_and_validate() -> Result<Config, Error> {
     let raw_config = fs::read(DEFAULT_CONFIG_FILE)
         .await
         .map_err(|err| Error::Config(format!("error reading config file ({DEFAULT_CONFIG_FILE}): {err}")))?;
-
-    info!("configuration successfully loaded from {DEFAULT_CONFIG_FILE}");
 
     let mut config_file: ConfigFile = serde_yaml::from_slice(&raw_config)
         .map_err(|err| Error::Config(format!("error parsing config file ({DEFAULT_CONFIG_FILE}): {err}")))?;
