@@ -27,7 +27,8 @@ pub struct RequestData<'a> {
 #[derive(Debug, Clone, Serialize)]
 pub struct ClientData {
     pub ip: IpAddr,
-    pub remote_port: u16,
+    // only signed integers are supported so we can't use an u16
+    pub remote_port: i32,
     pub asn: i64,
     pub country: CountryCode,
 }

@@ -213,7 +213,7 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
             };
             let client_data = rules::ClientData {
                 ip: request_context.client_address.ip(),
-                remote_port: request_context.client_address.port(),
+                remote_port: request_context.client_address.port() as i32,
                 asn: request_context.asn as i64,
                 country: request_context.country,
             };

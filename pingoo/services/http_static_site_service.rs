@@ -15,7 +15,7 @@ use hyper::body::Frame;
 use moka::future::Cache;
 use tokio::fs::{self, File};
 use tokio_util::io::ReaderStream;
-use tracing::{error, warn};
+use tracing::{debug, error, warn};
 
 use crate::{
     config::{ServiceConfig, StaticSiteServiceConfig},
@@ -89,6 +89,7 @@ impl HttpService for StaticSiteService {
 
         // prevent directory traversal and other similar attacks
         if url_path.contains("/..") || url_path.contains("../") || url_path.contains("//") {
+            debug!("error getting {url_path:?}: path is not valid");
             return new_not_found_error();
         }
 
@@ -107,12 +108,13 @@ impl HttpService for StaticSiteService {
             Ok(metadata) => metadata,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 if file_path.extension().is_some() {
+                    debug!("error getting {file_path:?}: not found");
                     return new_not_found_error();
                 }
 
                 // prettify URLs
                 // if the path has not extension and was not found, we try path + ".html"
-                // e.g. /page -> path.html
+                // e.g. /page -> /page.html
                 file_path.set_extension("html");
                 match try_metadata(&file_path).await {
                     Ok(metadata) => metadata,
@@ -257,9 +259,15 @@ impl HttpService for StaticSiteService {
 
 async fn try_metadata(path: &PathBuf) -> Result<Metadata, Response<BoxBody<Bytes, hyper::Error>>> {
     match fs::metadata(&path).await {
-        Ok(metadata) if metadata.is_dir() => Err(new_not_found_error()),
+        Ok(metadata) if metadata.is_dir() => {
+            debug!("error getting {path:?}: is a directory");
+            Err(new_not_found_error())
+        },
         Ok(metadata) => Ok(metadata),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Err(new_not_found_error()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            debug!("error getting {path:?}: not found");
+            Err(new_not_found_error())
+        },
         Err(err) => {
             error!("error getting metadata for static file: {path:?}: {err}");
             Err(new_internal_error_response_500())

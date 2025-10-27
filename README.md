@@ -39,11 +39,13 @@ See https://pingoo.io
 
 ## Social
 
-Follow us on [Bluesky @pingoo.io](https://bsky.app/profile/pingoo.io) or on Mastodon [@pingooio@mastodon.social](https://mastodon.social/@pingooio) to get the latest updates and technical deep dives 🦀⚡️
+Follow us on [Bluesky @pingoo.io](https://bsky.app/profile/pingoo.io) and on Mastodon [@pingooio@mastodon.social](https://mastodon.social/@pingooio) to get the latest updates and technical deep dives 🦀⚡️
 
 ## Contributing
 
 Please open an issue to discuss your idea before submitting a Pull Request.
+
+Contributions that use AI must be disclosed.
 
 
 ## Support

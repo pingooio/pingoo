@@ -58,21 +58,6 @@ impl TlsManager {
             .await
             .map_err(|err| Error::Config(format!("error creating TLS folder ({DEFAULT_TLS_FOLDER}): {err}")))?;
 
-        // let tls_dir_metadata = fs::metadata(DEFAULT_TLS_FOLDER).await.map_err(|err| {
-        //     Error::Config(format!("error reading metadata for TLS folder ({DEFAULT_TLS_FOLDER}): {err}"))
-        // })?;
-        // let mut permissions = tls_dir_metadata.permissions();
-        // if permissions.mode() != TLS_DIRECTORY_PERMISSIONS {
-        //     permissions.set_mode(0o700);
-        //     fs::set_permissions(DEFAULT_TLS_FOLDER, permissions)
-        //         .await
-        //         .map_err(|err| {
-        //             Error::Config(format!(
-        //                 "error updating permissions for TLS folder ({DEFAULT_TLS_FOLDER}): {err}"
-        //             ))
-        //         })?;
-        // }
-
         let (certificates, wildcard_certificates) = load_certificates(DEFAULT_TLS_FOLDER).await?;
 
         let default_certificate = load_or_create_default_certificate(DEFAULT_TLS_FOLDER.into()).await?;
