@@ -1,6 +1,6 @@
 DIST_DIR = dist
 COMMIT := $(shell git rev-parse HEAD)
-DOCKER_IMAGE= pingooio/pingoo
+DOCKER_IMAGE = pingooio/pingoo
 VERSION := $(shell cat Cargo.toml | grep '^version =' | cut -d'"' -f2)
 
 ####################################################################################################
@@ -35,11 +35,11 @@ release:
 	date
 	git checkout main
 	git push
+	git tag v$(VERSION)
+	git push --tags
 	git checkout release
 	git merge main
 	git push
-	git tag v$(VERSION)
-	git push --tags
 	git checkout main
 
 

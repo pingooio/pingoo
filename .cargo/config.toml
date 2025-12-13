@@ -1,7 +1,7 @@
 [build]
 rustflags = ["-C", "target-cpu=native"]
 
-# Using lld as the linker greatly improve compilation time.
+# Using lld as the linker greatly improves compilation time.
 # Since Rust 1.90 lld is the default linker on x86_64-unknown-linux-gnu
 [target.x86_64-unknown-linux-musl]
 rustflags = ["-C", "link-args=-fuse-ld=lld"]

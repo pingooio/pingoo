@@ -86,7 +86,7 @@ impl GeoipDB {
                 Ok(record)
             }
             Err(MaxMindDBError::AddressNotFoundError(_)) => Err(Error::AddressNotFound(ip)),
-            Err(err) => Err(Error::Unspecified(format!("geoip: error looking up GEOI for {ip}: {err}"))),
+            Err(err) => Err(Error::Unspecified(format!("geoip: error looking up GeoIP for {ip}: {err}"))),
         };
     }
 }
