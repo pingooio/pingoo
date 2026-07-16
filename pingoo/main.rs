@@ -13,6 +13,7 @@ mod error;
 mod geoip;
 mod listeners;
 mod lists;
+mod rate_limiter;
 mod rules;
 mod serde_utils;
 mod service_discovery;

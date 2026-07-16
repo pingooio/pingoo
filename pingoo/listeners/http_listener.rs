@@ -17,6 +17,7 @@ use crate::{
     config::ListenerConfig,
     geoip::{self, GeoipDB, GeoipRecord},
     listeners::{GRACEFUL_SHUTDOWN_TIMEOUT, Listener, accept_tcp_connection, bind_tcp_socket},
+    rate_limiter::limit_http_request,
     rules,
     services::{
         HttpService,
@@ -117,7 +118,7 @@ impl Listener for HttpListener {
     }
 }
 
-pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write + Unpin + Send + 'static>(
+pub async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write + Unpin + Send + 'static>(
     tcp_stream: IO,
     services: Arc<Vec<Arc<dyn HttpService>>>,
     client_socket_addr: SocketAddr,
@@ -256,6 +257,14 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
                             Action::Captcha {} => {
                                 if !captcha_verified {
                                     return Ok(captcha_manager.serve_captcha());
+                                }
+                            }
+                            Action::Limit {} => {
+                                // todo: if "action: limit" then this must be defined - not Option
+                                if let Some(tx) = rule.limiter_tx.clone() {
+                                    if let Some(res) = limit_http_request(client_data.ip, tx).await {
+                                        return Ok(res);
+                                    }
                                 }
                             }
                         }

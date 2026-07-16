@@ -20,6 +20,10 @@ fmt:
 check:
 	cargo check
 
+.PHONY: test
+test:
+	cargo test --features test-utils
+
 .PHONY: clean
 clean:
 	rm -rf $(DIST_DIR) captcha/dist

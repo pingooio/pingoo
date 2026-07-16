@@ -1,5 +1,17 @@
 {
   "dockerFile": "Dockerfile",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "rust-analyzer.cargo.features": ["test-utils"],
+        "rust-analyzer.check.features": ["test-utils"],
+        "rust-analyzer.runnables.extraArgs": [
+          "--features",
+          "test-utils"
+        ]
+      }
+    }
+  },
   "extensions": [
     "rust-lang.rust-analyzer"
   ],

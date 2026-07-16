@@ -75,6 +75,18 @@ pub fn new_bad_gateway_error() -> Response<BoxBody<Bytes, hyper::Error>> {
         .expect("error building new_bad_gateway_error");
 }
 
+pub fn new_service_unavailable_error_503() -> Response<BoxBody<Bytes, hyper::Error>> {
+    const ERROR_MESSAGE: &[u8] = b"503 Service Unavailable";
+    let res_body = Full::new(Bytes::from_static(ERROR_MESSAGE))
+        .map_err(|never| match never {})
+        .boxed();
+    return Response::builder()
+        .status(StatusCode::SERVICE_UNAVAILABLE)
+        .header(header::CACHE_CONTROL, &CACHE_CONTROL_NO_CACHE)
+        .body(res_body)
+        .expect("error building new_service_unavailable_error_503");
+}
+
 pub fn new_not_found_error() -> Response<BoxBody<Bytes, hyper::Error>> {
     const NOT_FOUND_ERROR_MESSAGE: &[u8] = b"404 Not Found.";
     let res_body = Full::new(Bytes::from_static(NOT_FOUND_ERROR_MESSAGE))
@@ -109,6 +121,18 @@ pub fn new_method_not_allowed_error() -> Response<BoxBody<Bytes, hyper::Error>> 
         .header(header::CACHE_CONTROL, &CACHE_CONTROL_NO_CACHE)
         .body(res_body)
         .expect("error building new_method_not_allowed_error");
+}
+
+pub fn new_too_many_requests_response_429() -> Response<BoxBody<Bytes, hyper::Error>> {
+    const ERROR_MESSAGE: &[u8] = b"429 Too Many Requests";
+    let res_body = Full::new(Bytes::from_static(ERROR_MESSAGE))
+        .map_err(|never| match never {})
+        .boxed();
+    return Response::builder()
+        .status(StatusCode::TOO_MANY_REQUESTS)
+        .header(header::CACHE_CONTROL, &CACHE_CONTROL_NO_CACHE)
+        .body(res_body)
+        .expect("error building new_too_many_requests_response_429");
 }
 
 pub fn get_path(req: &Request<Incoming>) -> &str {

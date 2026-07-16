@@ -98,6 +98,7 @@ pub struct ServiceConfigFileStaticNotFound {
 pub struct RuleConfigFile {
     pub expression: Option<String>,
     pub actions: Vec<rules::Action>,
+    pub limit: Option<rules::RateLimit>,
 }
 
 impl Default for ServiceConfigFileStaticNotFound {

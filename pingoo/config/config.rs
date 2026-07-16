@@ -9,13 +9,18 @@ use std::{
 use http::StatusCode;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use tokio::fs;
+use tokio::{
+    fs,
+    sync::mpsc::{self, Sender},
+    task::JoinHandle,
+};
 use tracing::{debug, warn};
 
 use crate::{
     Error,
     config::config_file::{ConfigFile, RuleConfigFile, parse_service},
     lists::ListType,
+    rate_limiter::{Probe, get_rate_limit_handle},
     rules::Rule,
     service_discovery::service_registry::Upstream,
     tls::acme::LETSENCRYPT_PRODUCTION_URL,
@@ -46,6 +51,7 @@ pub struct Config {
     pub service_discovery: ServiceDiscoveryConfig,
     pub lists: HashMap<String, ListConfig>,
     pub child_process: Option<ChildProcess>,
+    pub limiter_workers: Vec<JoinHandle<()>>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -252,10 +258,19 @@ pub async fn load_and_validate() -> Result<Config, Error> {
         .collect();
     validate_listeners_config(&listeners, &services)?;
 
+    let mut limiter_workers: Vec<JoinHandle<()>> = vec![];
     let rules: Vec<Rule> = config_file
         .rules
         .into_iter()
         .map(|(rule_name, rule_config)| {
+            let mut limiter_tx: Option<Sender<Probe>> = None;
+            if let Some(limiter_cfg) = rule_config.limit {
+                let buffer = 1024; // todo make configurable
+                let (tx, rx) = mpsc::channel(buffer);
+                limiter_workers.push(get_rate_limit_handle(rx, limiter_cfg));
+                limiter_tx = Some(tx);
+            }
+
             Ok(Rule {
                 name: rule_name,
                 expression: rule_config
@@ -263,6 +278,7 @@ pub async fn load_and_validate() -> Result<Config, Error> {
                     .map(|expression| rules::compile_expression(&expression))
                     .map_or(Ok(None), |r| r.map(Some))?,
                 actions: rule_config.actions,
+                limiter_tx,
             })
         })
         .collect::<Result<_, rules::Error>>()
@@ -317,6 +333,7 @@ pub async fn load_and_validate() -> Result<Config, Error> {
         service_discovery: config_file.service_discovery.unwrap_or_default(),
         lists,
         child_process: config_file.child_process,
+        limiter_workers,
     };
 
     return Ok(config);

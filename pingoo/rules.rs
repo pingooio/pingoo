@@ -2,15 +2,17 @@ use std::net::IpAddr;
 
 use http::Uri;
 use serde::Serialize;
+use tokio::sync::mpsc::Sender;
 use tracing::warn;
 
-use crate::{geoip::CountryCode, serde_utils};
+use crate::{geoip::CountryCode, rate_limiter::Probe, serde_utils};
 
 #[derive(Debug, Clone)]
 pub struct Rule {
     pub name: String,
     pub expression: Option<rules::CompiledExpression>,
     pub actions: Vec<rules::Action>,
+    pub limiter_tx: Option<Sender<Probe>>,
 }
 
 #[derive(Debug, Serialize)]
