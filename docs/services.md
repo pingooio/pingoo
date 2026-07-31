@@ -15,7 +15,7 @@ url: "/docs/services"
 ```yml
 services:
   api:
-    route: host.starts_with("api")
+    route: http_request.host.starts_with("api")
     http_proxy: ["http://127.0.0.1"]
 ```
 
@@ -31,7 +31,7 @@ listeners:
 
 services:
   api:
-    route: host.starts_with("api")
+    route: http_request.host.starts_with("api")
     http_proxy: ["http://api1.myservice.internal", "http://api2.myservice.internal"]
 ```
 
