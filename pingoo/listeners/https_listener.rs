@@ -91,7 +91,7 @@ impl Listener for HttpsListener {
                             tls_server_config.clone(),
                         ).await {
                             Ok(Some(tls_stream)) => tls_stream,
-                            _ => return,
+                            _ => continue,
                         };
 
                         serve_http_requests(
