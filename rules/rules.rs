@@ -32,6 +32,7 @@ pub type Context<'a> = bel::Context<'a>;
 pub enum Action {
     Block {},
     Captcha {},
+    Allow {},
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -40,6 +41,12 @@ pub enum Error {
     Unspecified(String),
     #[error("Expression is not valid: {0}")]
     ExpressionIsNotValid(String),
+    #[error("{0}")]
+    ParseIntError(String),
+    #[error("{0}")]
+    AddrParseError(String),
+    #[error("invalid CIDR format, expected <network>/<prefix>, got: {0}")]
+    InvalidCidrFormatError(String),
 }
 
 pub fn compile_expression(expression: &str) -> Result<CompiledExpression, Error> {
@@ -74,4 +81,16 @@ pub fn validate_expression(expression: &str) -> Result<(), Error> {
     // TODO
 
     return Ok(());
+}
+
+impl From<std::num::ParseIntError> for Error {
+    fn from(err: std::num::ParseIntError) -> Self {
+        Error::ParseIntError(err.to_string())
+    }
+}
+
+impl From<std::net::AddrParseError> for Error {
+    fn from(err: std::net::AddrParseError) -> Self {
+        Error::AddrParseError(err.to_string())
+    }
 }

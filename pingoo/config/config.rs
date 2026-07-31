@@ -1,7 +1,7 @@
 use core::fmt;
 use std::{
     collections::{HashMap, HashSet},
-    net::SocketAddr,
+    net::{Ipv4Addr, Ipv6Addr, SocketAddr},
     path::PathBuf,
     str::FromStr,
 };
@@ -16,7 +16,7 @@ use crate::{
     Error,
     config::config_file::{ConfigFile, RuleConfigFile, parse_service},
     lists::ListType,
-    rules::Rule,
+    rules::{CidrV4, CidrV6, Rule},
     service_discovery::service_registry::Upstream,
     tls::acme::LETSENCRYPT_PRODUCTION_URL,
 };
@@ -256,6 +256,15 @@ pub async fn load_and_validate() -> Result<Config, Error> {
         .rules
         .into_iter()
         .map(|(rule_name, rule_config)| {
+            let mut cidr_v4: Option<CidrV4> = None;
+            if let Some(c4) = rule_config.cidr_v4 {
+                cidr_v4 = Some(load_cidr_v4(c4)?);
+            }
+            let mut cidr_v6: Option<CidrV6> = None;
+            if let Some(c6) = rule_config.cidr_v6 {
+                cidr_v6 = Some(load_cidr_v6(c6)?);
+            }
+
             Ok(Rule {
                 name: rule_name,
                 expression: rule_config
@@ -263,6 +272,8 @@ pub async fn load_and_validate() -> Result<Config, Error> {
                     .map(|expression| rules::compile_expression(&expression))
                     .map_or(Ok(None), |r| r.map(Some))?,
                 actions: rule_config.actions,
+                cidr_v4,
+                cidr_v6,
             })
         })
         .collect::<Result<_, rules::Error>>()
@@ -447,4 +458,31 @@ fn default_docker_socket() -> String {
 
 fn default_tls_acme_directory_url() -> String {
     return LETSENCRYPT_PRODUCTION_URL.to_string();
+}
+
+fn load_cidr_v4(cidr: String) -> Result<CidrV4, rules::Error> {
+    let (network, prefix) = split_cidr(cidr)?;
+    let network = Ipv4Addr::from_str(network.as_str())?;
+    let prefix = prefix.parse::<u32>()?;
+
+    Ok(CidrV4::new(network, prefix))
+}
+
+fn load_cidr_v6(cidr: String) -> Result<CidrV6, rules::Error> {
+    let (network, prefix) = split_cidr(cidr)?;
+    let network = Ipv6Addr::from_str(network.as_str())?;
+    let prefix = prefix.parse::<u128>()?;
+
+    Ok(CidrV6::new(network, prefix))
+}
+
+fn split_cidr(cidr: String) -> Result<(String, String), rules::Error> {
+    let c: Vec<&str> = cidr.split("/").collect();
+    if c.len() != 2 {
+        return Err(rules::Error::InvalidCidrFormatError(cidr));
+    }
+    let network = c[0];
+    let prefix = c[1];
+
+    Ok((network.into(), prefix.into()))
 }

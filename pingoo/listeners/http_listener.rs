@@ -1,4 +1,8 @@
-use std::{net::SocketAddr, str::FromStr, sync::Arc};
+use std::{
+    net::{IpAddr, SocketAddr},
+    str::FromStr,
+    sync::Arc,
+};
 
 use ::rules::Action;
 use cookie::Cookie;
@@ -252,11 +256,37 @@ pub(super) async fn serve_http_requests<IO: hyper::rt::Read + hyper::rt::Write +
                 if rule.match_request(&rules_ctx) {
                     for action in &rule.actions {
                         match action {
+                            // todo: cidr support in other actions
                             Action::Block {} => return Ok(new_blocked_response()),
                             Action::Captcha {} => {
                                 if !captcha_verified {
                                     return Ok(captcha_manager.serve_captcha());
                                 }
+                            }
+                            Action::Allow {} => {
+                                if let Some(cidr) = &rule.cidr_v4 {
+                                    match client_data.ip {
+                                        IpAddr::V4(ip) => {
+                                            if !cidr.contains(ip) {
+                                                return Ok(new_blocked_response());
+                                            }
+                                        }
+                                        IpAddr::V6(_) => {}
+                                    }
+                                }
+
+                                if let Some(cidr) = &rule.cidr_v6 {
+                                    match client_data.ip {
+                                        IpAddr::V6(ip) => {
+                                            if !cidr.contains(ip) {
+                                                return Ok(new_blocked_response());
+                                            }
+                                        }
+                                        IpAddr::V4(_) => {}
+                                    }
+                                }
+
+                                // otherwise just pass through
                             }
                         }
                     }

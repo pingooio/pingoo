@@ -98,6 +98,8 @@ pub struct ServiceConfigFileStaticNotFound {
 pub struct RuleConfigFile {
     pub expression: Option<String>,
     pub actions: Vec<rules::Action>,
+    pub cidr_v4: Option<String>,
+    pub cidr_v6: Option<String>,
 }
 
 impl Default for ServiceConfigFileStaticNotFound {
