@@ -17,12 +17,12 @@ exif:
 
 .PHONY: install
 install:
-	npm install --no-scripts --ignore-scripts
+	npm install --ignore-scripts
 
 .PHONY: install_ci
 install_ci:
 	npm config set ignore-scripts true
-	npm ci --no-scripts --ignore-scripts
+	npm ci --ignore-scripts
 
 .PHONY: dev
 dev:

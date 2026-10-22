@@ -7,7 +7,6 @@ use cookie::Cookie;
 use http::{HeaderValue, Request, Response, header};
 use http_body_util::{BodyExt, Full, combinators::BoxBody};
 use hyper::body::Incoming;
-use mime_guess::mime;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 use tracing::{debug, error};
@@ -51,7 +50,7 @@ struct CaptchaInitResponseBody {
 struct CaptchaVerifyRequestBody {
     /// the hex-encoded hash computed by the client
     #[serde(with = "hex")]
-    pub hash: [u8; 32],
+    pub hash: Vec<u8>,
     /// the nonce combined with the challenge during the proof-of-work
     pub nonce: String,
 }
@@ -185,7 +184,7 @@ impl CaptchaManager {
 
         return Response::builder()
             .status(403)
-            .header(header::CONTENT_TYPE, mime::TEXT_HTML.as_ref())
+            .header(header::CONTENT_TYPE, media_type::TEXT_HTML.as_ref())
             .header(header::CACHE_CONTROL, "public, no-cache, must-revalidate")
             .body(res_body)
             .expect("error building captcha index.html");
@@ -194,8 +193,7 @@ impl CaptchaManager {
     async fn api_init(&self, client_id: &str) -> Response<BoxBody<Bytes, hyper::Error>> {
         let challenge_raw: [u8; 32] = rand::random();
         // 32 bytes encoded to base64 = 44 bytes
-        let challenge =
-            encode_to_base64_heapless::<44, _>(&challenge_raw, &base64::engine::general_purpose::URL_SAFE_NO_PAD);
+        let challenge = encode_to_base64_heapless::<44>(&challenge_raw, base64::Alphabet::UrlNoPadding);
 
         let captcha_cookie =
             match generate_captcha_cookie(&self.signing_key, client_id, &challenge, PROOF_OF_WORK_DIFFICULTY) {
@@ -231,7 +229,7 @@ impl CaptchaManager {
 
         return Response::builder()
             .status(200)
-            .header(header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+            .header(header::CONTENT_TYPE, media_type::APPLICATION_JSON.as_ref())
             .header(header::CACHE_CONTROL, "public, no-cache, must-revalidate")
             .header(header::SET_COOKIE, set_cookie_header)
             .body(response_body)
@@ -296,21 +294,23 @@ impl CaptchaManager {
             }
         };
 
-        if !constant_time_compare(
-            client_id.as_bytes(),
-            challenge_token_claims
-                .registered_claims
-                .sub
-                .unwrap_or_default()
-                .as_bytes(),
-        ) {
+        if input.hash.len() != 32
+            || !constant_time_compare(
+                client_id.as_bytes(),
+                challenge_token_claims
+                    .registered_claims
+                    .sub
+                    .unwrap_or_default()
+                    .as_bytes(),
+            )
+        {
             debug!("client id is not valid");
             return new_internal_error_response_500(); // TODO: return JSON response
         }
 
         // ensure that the number of leading zeroes match the difficulty
         let mut hash_hex = [0u8; 64];
-        hex::encode_to_slice(&input.hash, &mut hash_hex).expect("error encoding hash to hex");
+        hex::encode_into(&mut hash_hex, &input.hash, hex::Alphabet::Lower).expect("error encoding hash to hex");
         let leading_zeroes = hash_hex.iter().take_while(|&&character| character == '0' as u8).count();
         if leading_zeroes < (challenge_token_claims.difficulty as usize) {
             debug!(
@@ -356,7 +356,7 @@ impl CaptchaManager {
 
         let mut res = Response::builder()
             .status(200)
-            .header(header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+            .header(header::CONTENT_TYPE, media_type::APPLICATION_JSON.as_ref())
             .header(header::CACHE_CONTROL, "public, no-cache, must-revalidate");
 
         for cookie in response_new_cookies {
@@ -387,7 +387,7 @@ impl CaptchaManager {
     fn serve_asset(&self, path: &str) -> Response<BoxBody<Bytes, hyper::Error>> {
         match ::captcha::Assets::get(path.trim_start_matches('/')) {
             Some(asset) => {
-                let content_type = mime_guess::from_path(&path).first_or_octet_stream();
+                let content_type = media_type::from_path(&path).first_or_octet_stream();
 
                 let res_body = Full::new(Bytes::from(asset.data.to_vec()))
                     .map_err(|never| match never {})
@@ -417,7 +417,7 @@ pub fn generate_captcha_client_id(ip: IpAddr, user_agent: &str, hostname: &str) 
     let hash: [u8; 32] = hasher.finish().as_ref().try_into().unwrap();
 
     // 32 bytes encoded to base64 = 44 bytes
-    return encode_to_base64_heapless::<44, _>(&hash, &base64::engine::general_purpose::URL_SAFE_NO_PAD);
+    return encode_to_base64_heapless::<44>(&hash, base64::Alphabet::UrlNoPadding);
 }
 
 pub fn generate_captcha_cookie(
@@ -586,11 +586,9 @@ async fn save_jwt_keys(keys: &[&jwt::Key], path: &str) -> Result<(), Error> {
     return Ok(());
 }
 
-fn encode_to_base64_heapless<const N: usize, E: base64::Engine>(data: &[u8], engine: &E) -> heapless::String<N> {
+fn encode_to_base64_heapless<const N: usize>(data: &[u8], alphabet: base64::Alphabet) -> heapless::String<N> {
     let mut base64_buf = [0u8; N];
-    engine
-        .encode_slice(data, &mut base64_buf)
-        .expect("error encoding to base64");
+    base64::encode_into(&mut base64_buf, data, alphabet).expect("error encoding to base64");
     let mut ret = heapless::String::new();
     unsafe {
         // this is safe because base64 checks that the output buffer is of the correct size before writing to it

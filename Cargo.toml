@@ -1,6 +1,6 @@
 [package]
 name = "pingoo"
-version = "0.14.9"
+version = "0.14.10"
 edition = "2024"
 
 [[bin]]
@@ -51,7 +51,7 @@ instant-acme = { workspace = true }
 ipnetwork = { workspace = true, features = ["serde"] }
 maxminddb = { workspace = true }
 mimalloc = { workspace = true }
-mime_guess = { workspace = true }
+media_type = { workspace = true }
 moka = { workspace = true, features = ["future"] }
 rand = { workspace = true }
 rcgen = { workspace = true, default-features = false, features = ["crypto", "aws_lc_rs", "pem"]}
@@ -98,10 +98,10 @@ embed = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 hex = { git = "https://github.com/pingooio/stdx-rs", branch = "main", features = ["serde"] }
 ipnetwork = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 maxminddb = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
-mime_guess = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+media_type = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 serde_urlencoded = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 serde_yaml = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
-uuid = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
+uuid = { features = ["serde"], git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 
 
 async-trait = "0.1"
@@ -120,7 +120,7 @@ hyper = "1"
 hyper-rustls = "0.27"
 hyper-util = "0.1"
 indexmap = "2"
-instant-acme = { git = "https://github.com/djc/instant-acme", branch = "main" }
+instant-acme = "0.8"
 mimalloc = "0.1"
 moka = "0.12"
 rand = "0.9"
@@ -158,24 +158,10 @@ zstd = "0.13"
 
 [patch.crates-io]
 base64 = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
-cfg-if = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 form_urlencoded = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 hex = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
-httpdate = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 ipnetwork = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
-itoa = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
-mime_guess = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
-percent-encoding = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 pin-project-lite = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 ryu = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 serde_urlencoded = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
 uuid = { git = "https://github.com/pingooio/stdx-rs", branch = "main" }
-
-
-thiserror = { git = "https://github.com/dtolnay/thiserror", rev = "ac14934703ad60ece218e6517caf7ae45f5d074e" }
-thiserror-impl =  { git = "https://github.com/dtolnay/thiserror", rev = "ac14934703ad60ece218e6517caf7ae45f5d074e" }
-async-trait = { git = "https://github.com/dtolnay/async-trait", rev = "a6283077eaf47f73f7db6a492a6a3063f44cba37" }
-serde = { git = "https://github.com/serde-rs/serde", rev = "d17902059e77e371d8a7f83ff403f9e760b70f45" }
-serde_core = { git = "https://github.com/serde-rs/serde", rev = "d17902059e77e371d8a7f83ff403f9e760b70f45" }
-serde_derive = { git = "https://github.com/serde-rs/serde", rev = "d17902059e77e371d8a7f83ff403f9e760b70f45" }
-serde_json = { git = "https://github.com/serde-rs/json", rev = "4f6dbfac79647d032b0997b5ab73022340c6dab7" }

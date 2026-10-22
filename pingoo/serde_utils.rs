@@ -34,7 +34,7 @@ pub mod rustls_private_pkcs_key_der {
     use std::fmt;
 
     pub fn serialize<S: Serializer>(pruvate_key: &PrivatePkcs8KeyDer<'_>, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(&base64::encode(pruvate_key.secret_pkcs8_der()))
+        serializer.serialize_str(&base64::encode(pruvate_key.secret_pkcs8_der(), base64::Alphabet::Standard))
     }
 
     pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<PrivatePkcs8KeyDer<'static>, D::Error> {
@@ -48,7 +48,7 @@ pub mod rustls_private_pkcs_key_der {
             }
 
             fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
-                let bytes = base64::decode(v.as_bytes()).map_err(de::Error::custom)?;
+                let bytes = base64::decode(v.as_bytes(), base64::Alphabet::Standard).map_err(de::Error::custom)?;
                 PrivatePkcs8KeyDer::try_from(bytes).map_err(de::Error::custom)
             }
         }

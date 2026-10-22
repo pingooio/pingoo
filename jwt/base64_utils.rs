@@ -1,5 +1,4 @@
 pub mod base64_url_no_padding {
-    use base64::{Engine, engine::general_purpose};
     use serde::{Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S, T>(bytes: T, serializer: S) -> Result<S::Ok, S::Error>
@@ -7,7 +6,7 @@ pub mod base64_url_no_padding {
         S: Serializer,
         T: AsRef<[u8]>,
     {
-        let encoded = general_purpose::URL_SAFE_NO_PAD.encode(bytes.as_ref());
+        let encoded = base64::encode(bytes.as_ref(), base64::Alphabet::UrlNoPadding);
         serializer.serialize_str(&encoded)
     }
 
@@ -16,9 +15,7 @@ pub mod base64_url_no_padding {
         D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        general_purpose::URL_SAFE_NO_PAD
-            .decode(s.as_bytes())
-            .map_err(serde::de::Error::custom)
+        base64::decode(s.as_bytes(), base64::Alphabet::UrlNoPadding).map_err(serde::de::Error::custom)
     }
 
     pub mod option {

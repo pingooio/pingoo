@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use base64::Engine;
 use chrono::Utc;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
@@ -170,15 +169,14 @@ impl Algorithm {
 }
 
 pub fn sign<C: Serialize>(key: &Key, header: &Header, claims: &C) -> Result<String, Error> {
-    let header_base64 =
-        base64::encode_with_alphabet(serde_json::to_string(header)?.as_bytes(), base64::Alphabet::UrlNoPadding);
-    let claims_base64 =
-        base64::encode_with_alphabet(serde_json::to_string(claims)?.as_bytes(), base64::Alphabet::UrlNoPadding);
+    let header_base64 = base64::encode(serde_json::to_string(header)?.as_bytes(), base64::Alphabet::UrlNoPadding);
+    let claims_base64 = base64::encode(serde_json::to_string(claims)?.as_bytes(), base64::Alphabet::UrlNoPadding);
 
     let mut jwt = String::with_capacity(
         header_base64.len()
             + claims_base64.len()
-            + base64::encoded_len(key.algorithm.signature_size(), false).expect("error getting base64 encoding length")
+            + base64::encoded_length(key.algorithm.signature_size(), false)
+                .expect("error getting base64 encoding length")
             + 2,
     );
     jwt.push_str(&header_base64);
@@ -187,10 +185,7 @@ pub fn sign<C: Serialize>(key: &Key, header: &Header, claims: &C) -> Result<Stri
 
     let signature = key.sign(jwt.as_bytes())?;
     jwt.push('.');
-    jwt.push_str(&base64::encode_with_alphabet(
-        signature.as_ref(),
-        base64::Alphabet::UrlNoPadding,
-    ));
+    jwt.push_str(&base64::encode(signature.as_ref(), base64::Alphabet::UrlNoPadding));
 
     return Ok(jwt);
 }
@@ -202,9 +197,8 @@ pub fn parse_header(token: &str) -> Result<Header, Error> {
         return Err(Error::InvalidToken);
     }
 
-    let header_json = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(header_base64.as_bytes())
-        .map_err(|_| Error::InvalidToken)?;
+    let header_json =
+        base64::decode(header_base64.as_bytes(), base64::Alphabet::UrlNoPadding).map_err(|_| Error::InvalidToken)?;
     let header: Header = serde_json::from_slice(&header_json).map_err(|_| Error::InvalidToken)?;
 
     return Ok(header);
@@ -225,25 +219,26 @@ pub fn parse_and_verify<C: DeserializeOwned>(
         return Err(Error::InvalidToken);
     }
 
-    let signature_size = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode_slice(signature_base64.as_bytes(), &mut signature_buffer)
-        .map_err(|_| Error::InvalidSignature)?;
+    let signature_size = base64::decode_into(
+        &mut signature_buffer,
+        signature_base64.as_bytes(),
+        base64::Alphabet::UrlNoPadding,
+    )
+    .map_err(|_| Error::InvalidSignature)?;
     let raw_signature = &signature_buffer[..signature_size];
 
     let signed_message = &token[..header_base64.len() + 1 + claims_base64.len()].as_bytes();
     key.verify(signed_message, &raw_signature)?;
 
-    let header_json = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(header_base64.as_bytes())
-        .map_err(|_| Error::InvalidToken)?;
+    let header_json =
+        base64::decode(header_base64.as_bytes(), base64::Alphabet::UrlNoPadding).map_err(|_| Error::InvalidToken)?;
     let header: Header = serde_json::from_slice(&header_json).map_err(|_| Error::InvalidToken)?;
     if header.alg != key.algorithm {
         return Err(Error::InvalidToken);
     }
 
-    let claims_json = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(claims_base64.as_bytes())
-        .map_err(|_| Error::InvalidToken)?;
+    let claims_json =
+        base64::decode(claims_base64.as_bytes(), base64::Alphabet::UrlNoPadding).map_err(|_| Error::InvalidToken)?;
 
     let claims = if valdiate_options.exp
         || valdiate_options.nbf

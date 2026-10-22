@@ -129,7 +129,7 @@ impl HttpService for StaticSiteService {
 
         // get the file extension from its content type
         let file_extension = file_path.extension().unwrap_or_default().to_str().unwrap_or_default();
-        let content_type = mime_guess::from_ext(file_extension).first_or_octet_stream().to_string();
+        let content_type = media_type::from_ext(file_extension).first_or_octet_stream().to_string();
         // Unix timestamp (nanoseconds) of the file's last modification time
         let file_size = file_metadata.size();
         let mut res = Response::builder()
