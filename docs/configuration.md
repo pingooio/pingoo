@@ -50,7 +50,7 @@ services:
   api: # name of the service
     # (optional) expression to filter requests
     # match any request / connection if left empty
-    route: http_request.starts_with("/api")
+    route: http_request.path.starts_with("/api")
     http_proxy: [] # list of upstreams. Can be left empty if using Docker service discovery
 
   webapp:
