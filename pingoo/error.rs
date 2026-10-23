@@ -1,3 +1,4 @@
+use std::io;
 use std::net::SocketAddr;
 
 use crate::geoip;
@@ -16,10 +17,18 @@ pub enum Error {
     },
     #[error("{0}")]
     Tls(String),
+    #[error("{0}")]
+    IO(String),
 }
 
 impl From<geoip::Error> for Error {
     fn from(err: geoip::Error) -> Self {
         Error::Unspecified(err.to_string())
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        Error::IO(err.to_string())
     }
 }

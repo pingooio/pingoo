@@ -1,4 +1,4 @@
-use std::{fmt::Debug, path::PathBuf, sync::Arc};
+use std::{fmt::Debug, os::unix::fs::PermissionsExt, path::PathBuf, sync::Arc};
 
 use dashmap::DashMap;
 use rustls::{
@@ -6,7 +6,7 @@ use rustls::{
     crypto::CryptoProvider,
     server::{ClientHello, ResolvesServerCert},
 };
-use tokio::fs;
+use tokio::fs::{self, set_permissions};
 use tracing::warn;
 
 use crate::{
@@ -54,9 +54,13 @@ impl Debug for AcmeConfig {
 
 impl TlsManager {
     pub async fn new(tls_config: &TlsConfig) -> Result<Self, Error> {
-        fs::create_dir_all(DEFAULT_TLS_FOLDER)
+        let tls_dir: PathBuf = DEFAULT_TLS_FOLDER.into();
+        fs::create_dir_all(&tls_dir)
             .await
             .map_err(|err| Error::Config(format!("error creating TLS folder ({DEFAULT_TLS_FOLDER}): {err}")))?;
+        let mut dir_permissions = tls_dir.metadata()?.permissions();
+        dir_permissions.set_mode(0o750);
+        set_permissions(&tls_dir, dir_permissions).await?;
 
         let (certificates, wildcard_certificates) = load_certificates(DEFAULT_TLS_FOLDER).await?;
 
