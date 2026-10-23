@@ -1,4 +1,4 @@
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use http::Uri;
 use serde::Serialize;
@@ -11,6 +11,8 @@ pub struct Rule {
     pub name: String,
     pub expression: Option<rules::CompiledExpression>,
     pub actions: Vec<rules::Action>,
+    pub cidr_v4: Option<CidrV4>,
+    pub cidr_v6: Option<CidrV6>,
 }
 
 #[derive(Debug, Serialize)]
@@ -57,3 +59,39 @@ impl Rule {
 // {
 //     serializer.serialize_str(value)
 // }
+
+#[derive(Debug, Clone)]
+pub struct CidrV4 {
+    pub network: Ipv4Addr,
+    pub prefix: u32,
+    mask: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct CidrV6 {
+    pub network: Ipv6Addr,
+    pub prefix: u128,
+    mask: u128,
+}
+
+impl CidrV4 {
+    pub fn new(network: Ipv4Addr, prefix: u32) -> Self {
+        let mask = if prefix == 0 { 0 } else { u32::MAX << (32 - prefix) };
+        Self { network, prefix, mask }
+    }
+
+    pub fn contains(&self, ip: Ipv4Addr) -> bool {
+        (ip.to_bits() & self.mask) == (self.network.to_bits() & self.mask)
+    }
+}
+
+impl CidrV6 {
+    pub fn new(network: Ipv6Addr, prefix: u128) -> Self {
+        let mask = if prefix == 0 { 0 } else { u128::MAX << (128 - prefix) };
+        Self { network, prefix, mask }
+    }
+
+    pub fn contains(&self, ip: Ipv6Addr) -> bool {
+        (ip.to_bits() & self.mask) == (self.network.to_bits() & self.mask)
+    }
+}

@@ -82,6 +82,7 @@ Pingoo currently supports the following actions:
 
 - `captcha`: Serve a CAPTCHA to the client that must be solved to proceed.
 - `block`: Serve a 403 permission denied page.
+- `allow`: Serve 403 permission denied page on CIDR mismatch
 
 
 ## Lists
@@ -118,3 +119,15 @@ Valid lists types:
 - `String`
 - `Ip`
 
+## CIDR whitelist
+Instead of lists you can define `cidr_v4` or `cidr_v6` together with `allow`
+action.
+```yml
+rules:
+  restrict_internal_routes:
+    cidr_v4: 10.2.0.0/16
+    expression: |
+      http_request.host == "api.bar.private"
+    actions:
+      - action: allow
+```
