@@ -22,6 +22,14 @@ pub struct Rule {
 pub type CompiledExpression = bel::Program;
 pub type Context<'a> = bel::Context<'a>;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "limit", rename_all = "snake_case")]
+pub struct RateLimit {
+    pub max: u16,
+    pub window: u16,
+    pub capacity: usize,
+}
+
 // pub struct CompiledRule {
 //     pub id: Uuid,
 //     pub updated_at: DateTime<Utc>,
@@ -32,6 +40,7 @@ pub type Context<'a> = bel::Context<'a>;
 pub enum Action {
     Block {},
     Captcha {},
+    Limit {},
 }
 
 #[derive(Debug, thiserror::Error)]
